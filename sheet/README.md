@@ -13,8 +13,8 @@ This app is part of the `primordium-tools` repository and is published with it (
 
 ## Using the app
 
-- **Overview:** your character at a glance. Flip the switch to **Combat** to track current HP, the death clock, temporary stat changes, and effects (stacks, resources, conditions, and stat effects added with **+ Add**). Use **End combat**, **Take a breather**, or **Full rest** to clear them.
-- **Sheet:** name, race, level, base stats and HP, card assignment (updated by Tactics), background traits, resistances, and notes.
+- **Overview:** your character at a glance, with a dice tray (tap dice to build a roll, plus Initiative, Speed, Out of combat, and Contest rolls with your stats). In combat it also runs your tactical deck: your hand of 3, pairs, Re-Evaluate, and every mechanic your Tactics tier and path add. Take a breather, Full rest, and End combat also act on the deck. Flip the switch to **Combat** to track current HP, the death clock, temporary stat changes, and effects (stacks, resources, conditions, and stat effects added with **+ Add**). Use **End combat**, **Take a breather**, or **Full rest** to clear them.
+- **Sheet:** name, race, level, base stats and HP, card assignment (updated by Tactics; choose which cards each promotion moves), background traits, resistances, and notes.
 - **Inventory:** your pack and equipped items. Equip an item to set it as armor or a weapon, with its material, tier, Condition, and enchantments.
 - **Abilities:** every ability and perk your skills grant, plus your own entries.
 - **Skills:** raise or lower each skill's tiers. Each change shows what it added or removed.
@@ -34,6 +34,7 @@ When you change any file here or `../shared/primordium-data.js`, also raise `VER
 - `app.js`: screens, rules, and saving
 - `data.js`: sheet layout lists (stats, stacks, rarities, gear slots)
 - `../shared/primordium-data.js` (shared with the GM tool and the Codex): full Primordium 2.0 data (every skill tier's abilities and perks, races, and traits)
+- `../shared/tactics-deck.js` and `../shared/dice.js` (shared with the Codex): the tactical deck and dice rolls
 - `style.css`: the look
 - `sw.js`: offline support
 - `manifest.webmanifest` and `icons/`: home screen install

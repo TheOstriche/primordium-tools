@@ -52,21 +52,7 @@ const chip = r => r ? `<span class="card-chip r-${esc(r)}"><span class="pip">${e
 
 /* ---------- dice ---------- */
 const DICE_RE = /(?<![A-Za-z0-9])(\d*D\d+(?:\s?[+\-]\s?(?:\d*D\d+|\d+(?!D)))*)(?![A-Za-z0-9])/g;
-function rollExpr(expr){
-  const terms = expr.replace(/\s+/g,"").match(/[+\-]?[^+\-]+/g) || [];
-  let total = 0, parts = [], dice = [];
-  for (const t of terms){
-    const sign = t[0] === "-" ? -1 : 1, body = t.replace(/^[+\-]/,"");
-    const m = body.match(/^(\d*)D(\d+)$/i);
-    if (m){
-      const n = +(m[1]||1), f = +m[2], rs = [];
-      for (let i=0;i<n;i++){ const r = 1 + Math.floor(Math.random()*f); rs.push(r); dice.push({f,r}); }
-      const s = rs.reduce((a,b)=>a+b,0)*sign; total += s;
-      parts.push(`${sign<0?"−":""}${n>1?n:""}D${f} [${rs.join(", ")}]`);
-    } else if (/^\d+$/.test(body)){ total += sign*+body; parts.push(signed(sign*+body)); }
-  }
-  return {total, parts, dice};
-}
+const rollExpr = window.PrimordiumDice.roll;
 function linkDice(text){
   return esc(text).replace(DICE_RE, m => `<button class="die" data-roll="${m.replace(/\s/g,"")}">${m}</button>`);
 }
@@ -359,90 +345,40 @@ function tablesHTML(T){
 
 V.rule = (p) => { state.tab = "rules"; state.ruleGroup = DATA.rules.find(s=>s.id===p.id).group; state.stack = []; state.pendingOpen = p.id; return V.rules(); };
 
-/* ---------- tactical deck simulator ---------- */
-const SUITS = [["♠","b"],["♥","r"],["♦","r"],["♣","b"]];
-const RANKS = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
-function cardRarity(rank, color){
-  if (rank==="JK") return "Legendary";
-  if (["2","3","4","5","6"].includes(rank)) return "Basic";
-  if (rank==="7") return color==="b" ? "Basic" : "Common";
-  if (["8","9","10"].includes(rank)) return "Common";
-  if (rank==="J") return color==="b" ? "Common" : "Uncommon";
-  if (rank==="Q") return "Uncommon";
-  if (rank==="K") return color==="b" ? "Uncommon" : "Rare";
-  if (rank==="A") return color==="b" ? "Rare" : "Epic";
-}
-const RIDERS = {"♠":"Spades rider: reroll one damage die.","♥":"Hearts rider: make a recovery roll, or heal 1D4.","♦":"Diamonds rider: reroll a natural 1 or a failed accuracy roll.","♣":"Clubs rider: +2 armor until your next turn."};
-function fullDeck(){
-  const d = [];
-  SUITS.forEach(([s,c]) => RANKS.forEach(r => d.push({r, s, c, rar: cardRarity(r,c)})));
-  d.push({r:"JK", s:"★", c:"x", rar:"Legendary"});
-  return d;
-}
-function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; }
-function newDeck(){ const draw = shuffle(fullDeck()); return {draw, hand: draw.splice(0,3), discard: [], breather: false, sel: [], log: "Fresh deck. Drew 3."}; }
-let DECK = store.get("deck", null); if (!DECK || !DECK.draw) DECK = newDeck();
-function drawTo3(){ while (DECK.hand.length < 3 && DECK.draw.length) DECK.hand.push(DECK.draw.shift()); }
-const cardName = c => c.r==="JK" ? "Joker" : `${c.r}${c.s}`;
-function deckAction(act, i){
-  if (act==="sel"){ i = +i; DECK.sel = DECK.sel.includes(i) ? DECK.sel.filter(x=>x!==i) : [...DECK.sel, i].slice(-3); }
-  const picked = DECK.sel.map(x=>DECK.hand[x]).filter(Boolean);
-  const remove = () => { const s = new Set(DECK.sel); DECK.discard.push(...picked); DECK.hand = DECK.hand.filter((_,k)=>!s.has(k)); DECK.sel = []; };
-  if (act==="play" && picked.length===1){
-    const c = picked[0]; remove(); drawTo3();
-    DECK.log = `Played <b>${cardName(c)}</b> for ${/^[UEA]/.test(c.rar)?"an":"a"} ${c.rar} ability or lower.${RIDERS[c.s] ? " " + RIDERS[c.s] + " (with Tactics training)" : ""}`;
-  }
-  if (act==="pair" && picked.length===2 && picked[0].rar===picked[1].rar && picked[0].rar!=="Mythic"){
-    const up = RAR[RAR.indexOf(picked[0].rar)+1]; const names = picked.map(cardName).join(" + "); remove(); drawTo3();
-    DECK.log = `Paired <b>${names}</b> as one <b>${up}</b> card.`;
-  }
-  if (act==="reeval" && picked.length){
-    const n = picked.length; remove(); drawTo3();
-    DECK.log = `Re-Evaluate: discarded ${n}, drew back to ${DECK.hand.length}. Uses your Standard action.`;
-  }
-  if (act==="breather"){
-    if (DECK.breather){ DECK.log = "Breather already used today. A full rest resets it."; }
-    else { const back = shuffle(DECK.discard).splice(0, 8); DECK.discard = DECK.discard.filter(c=>!back.includes(c)); DECK.draw = shuffle([...DECK.draw, ...back]); DECK.breather = true; drawTo3();
-      DECK.log = `Breather: ${back.length} cards shuffled back from the discard.`; }
-  }
-  if (act==="rest"){ DECK = newDeck(); DECK.log = "Full rest: whole deck reshuffled, drew 3."; }
-  store.set("deck", DECK);
-}
+/* ---------- tactical deck (rules in ../shared/tactics-deck.js) ---------- */
+const DK = window.PrimordiumDeck;
+const TAC = Object.assign({level:{base:0, path:"", ptier:0}, picks:{}, suit:""}, store.get("tactics", {}));
+const deckBuild = () => DK.build(TAC.level, TAC.picks, TAC.suit);
+let DECK = DK.fit(store.get("deck2", null), deckBuild());
+const saveTac = () => { store.set("tactics", TAC); DECK = DK.fit(DECK, deckBuild()); store.set("deck2", DECK); };
 function deckHTML(){
-  const sel = DECK.sel, picked = sel.map(x=>DECK.hand[x]).filter(Boolean);
-  const canPair = picked.length===2 && picked[0].rar===picked[1].rar && picked[0].rar!=="Mythic";
-  const pairTo = canPair ? RAR[RAR.indexOf(picked[0].rar)+1] : "";
-  const best = DECK.hand.reduce((b,c)=>Math.max(b, RAR.indexOf(c.rar)), -1);
-  const slots = [0,1,2].map(i => {
-    const c = DECK.hand[i];
-    if (!c) return `<div class="pcard empty">No card</div>`;
-    const mid = c.r==="JK" ? "★" : c.s;
-    return `<button class="pcard r-${c.rar}" data-deck="sel" data-i="${i}" aria-pressed="${sel.includes(i)}" aria-label="${esc(cardName(c))}, ${c.rar}">
-      <span class="rk">${c.r==="JK"?"JK":esc(c.r)}<small>${c.r==="JK"?"":c.s}</small></span><span class="mid">${mid}</span><span class="lbl">${c.rar}</span></button>`;
-  }).join("");
-  return `<div class="deckbar"><span>Draw pile <b>${DECK.draw.length}</b></span><span>Discard <b>${DECK.discard.length}</b></span><span>Breather <b>${DECK.breather?"used":"ready"}</b></span></div>
-  <div class="hand">${slots}</div>
-  <p class="muted ui" style="font-size:.82rem;margin:0">${DECK.hand.length ? `Tap cards to select. This hand can pay up to <b>${RAR[best]}</b>.` : "Out of cards: Basic abilities still work with no card."}</p>
-  <div class="btns" style="margin-top:12px">
-    <button class="btn" data-deck="play" ${picked.length===1?"":"disabled"}>Play card</button>
-    <button class="btn" data-deck="pair" ${canPair?"":"disabled"}>Play pair${canPair?" as "+pairTo:""}</button>
-    <button class="btn ghost" data-deck="reeval" ${picked.length?"":"disabled"}>Re-Evaluate</button>
+  const b = deckBuild();
+  const lv = TAC.level, cur = JSON.stringify([lv.base, lv.path||"", lv.ptier||0]);
+  const opt = l => { const v = JSON.stringify([l.base, l.path, l.ptier]); return `<option value='${v}' ${v===cur?"selected":""}>${esc(DK.levelLabel(l))}</option>`; };
+  const levels = `<optgroup label="Base tiers">${DK.LEVELS.filter(l=>!l.path).map(opt).join("")}</optgroup>` +
+    DK.PATHS.map(p => `<optgroup label="${esc(p)} path">${DK.LEVELS.filter(l=>l.path===p).map(opt).join("")}</optgroup>`).join("");
+  const perks = b.granted.filter(g => g.name !== "Basic Tactics");
+  return `<div class="panel tac-panel">
+    <label class="fieldrow" for="tacLevel"><span>Tactics skill</span><select id="tacLevel">${levels}</select></label>
+    ${b.needsSuit ? `<label class="fieldrow" for="tacSuit"><span>Suit Mastery suit</span><select id="tacSuit"><option value="">Choose a suit</option>${DK.SUITS.map(([sym,n])=>`<option value="${n}" ${TAC.suit===n?"selected":""}>${sym} ${n}</option>`).join("")}</select></label>` : ""}
+    <div class="decklist">${DK.RAR.filter(r=>b.counts[r]).map(r=>`<span>${chip(r)}<b class="num">${b.counts[r]}</b></span>`).join("")}</div>
+    ${perks.length ? `<details class="fold"><summary>What this level grants (${perks.length})</summary><div>${perks.map(g=>`<div class="entry" data-ctx="${esc(g.name)}"><div class="entry-head"><span class="entry-name">${esc(g.name)}</span><span style="display:flex;gap:8px;align-items:center">${g.kind==="perk"?`<span class="tag perk">Perk</span>`:`<span class="tag">${esc(g.type||"")}</span>${chip(g.rarity)}`}</span></div><p class="use">${linkDice(g.usage||"")}</p><p class="muted ui" style="font-size:.78rem;margin:4px 0 0">${esc(g.tier)}</p></div>`).join("")}</div></details>` : ""}
+    <details class="fold"><summary>Card assignment</summary><div>
+      ${b.steps.length ? b.steps.map(st=>`<label class="fieldrow"><span>${esc(st.perk)}: ${esc(st.label)}</span><select data-promo="${esc(st.key)}">${st.options.map(o=>`<option value="${esc(o.v)}" ${o.v===st.value?"selected":""}>${esc(o.label)}</option>`).join("")}</select></label>`).join("") : `<p class="muted ui" style="font-size:.85rem;margin:0">No promotions at this level. Tactics Base Tier 1 adds the first.</p>`}
+      <div class="tbl-wrap" style="margin-top:10px"><table><thead><tr><th>Rarity</th><th>Cards</th><th>Which cards</th></tr></thead><tbody>
+      ${DK.RAR.filter(r=>b.counts[r]).map(r=>`<tr><td>${chip(r)}</td><td class="n">${b.counts[r]}</td><td>${esc(b.mapping[r])}</td></tr>`).join("")}</tbody></table></div>
+      ${b.f.wild ? `<p class="muted ui" style="font-size:.82rem;margin:8px 0 0">Jokers are wild: each counts as any rarity up to ${b.f.wildCap}.</p>` : ""}
+    </div></details>
   </div>
-  <p class="deck-log">${DECK.log||""}</p>
-  <div class="btns" style="margin-top:10px">
-    <button class="btn ghost" data-deck="breather">Breather · 8 back</button>
-    <button class="btn ghost" data-deck="rest">Full rest</button>
-  </div>
+  ${DK.render(DECK, b, {session:true})}
   <h3 class="sec">Rarity by card</h3>
-  ${ladderHTML("Mythic").replace(/ off/g,"").replace(/<i>[^<]*<\/i>/g,"")}
-  <div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>Rarity</th><th>Cards</th><th>Default mapping</th></tr></thead><tbody>
-  ${DATA.tables.deck.filter(d=>d.cards).map(d=>`<tr><td>${chip(d.rarity)}</td><td class="n">${d.cards}</td><td>${esc(d.mapping)}</td></tr>`).join("")}</tbody></table></div>`;
+  ${ladderHTML("Mythic").replace(/ off/g,"").replace(/<i>[^<]*<\/i>/g,"")}`;
 }
 
 V.dice = () => {
   const view = state.diceView;
   const seg = `<div class="seg" role="group" aria-label="Dice or deck">${[["dice","Dice"],["deck","Deck"]].map(([k,l])=>`<button aria-pressed="${k===view}" data-dview="${k}">${l}</button>`).join("")}</div>`;
-  if (view==="deck") return `<p class="eyebrow">Tactical deck · 52 cards and a joker</p><h2 class="leaf-title">Draw</h2>${seg}${deckHTML()}`;
+  if (view==="deck") return `<p class="eyebrow">Tactical deck · ${deckBuild().cards.length - 52 > 1 ? "52 cards and two jokers" : "52 cards and a joker"}</p><h2 class="leaf-title">Draw</h2>${seg}${deckHTML()}`;
   const faces = [4,6,8,10,12,20];
   const count = f => state.pool.filter(x=>x===f).length;
   const expr = poolExpr();
@@ -506,7 +442,7 @@ $("#view").addEventListener("click", e => {
     $("#tacOut").innerHTML = `<div class="verdict"><span class="big">${res.total}</span>${chip(r)}<p class="muted ui" style="margin:6px 0 0;font-size:.85rem">If nothing at ${r} is ready, drop one rarity at a time.</p></div>`;
     return;
   }
-  const dk = t.closest("[data-deck]"); if (dk){ deckAction(dk.dataset.deck, dk.dataset.i); return render(); }
+  const dk = t.closest("[data-deck]"); if (dk){ DK.act(DECK, deckBuild(), dk.dataset.deck, dk.dataset.i); store.set("deck2", DECK); return render(); }
   const dv = t.closest("[data-dview]"); if (dv){ state.diceView = dv.dataset.dview; store.set("diceView", state.diceView); return render(); }
   const tac = t.closest("[data-tactic]");
   if (tac){
@@ -543,7 +479,13 @@ $("#view").addEventListener("input", e => {
     $("#lvTo").textContent = lv; $("#lvNeed").textContent = 100 + 25*(lv-1);
   }
 });
-$("#view").addEventListener("change", e => { if (e.target.id==="xpRole") e.target.dispatchEvent(new Event("input",{bubbles:true})); });
+$("#view").addEventListener("change", e => {
+  const t = e.target;
+  if (t.id==="xpRole") t.dispatchEvent(new Event("input",{bubbles:true}));
+  if (t.id==="tacLevel"){ const [base, path, ptier] = JSON.parse(t.value); TAC.level = {base, path, ptier}; saveTac(); render(); }
+  if (t.id==="tacSuit"){ TAC.suit = t.value; saveTac(); render(); }
+  if (t.dataset.promo){ TAC.picks[t.dataset.promo] = t.value; saveTac(); render(); }
+});
 
 render();
 

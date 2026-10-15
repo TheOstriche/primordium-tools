@@ -157,6 +157,31 @@ label.inline{display:flex;align-items:center;gap:8px;font:.9rem var(--f-ui);colo
 .pcard.empty{border-style:dashed;border-color:var(--rule);color:var(--ink-dim);cursor:default;justify-content:center;align-items:center;font:.8rem var(--f-ui)}
 .deck-log{font:.88rem/1.4 var(--f-ui);color:var(--ink-dim);min-height:1.4em;margin:8px 0 0}
 .deck-log b{color:var(--ink)}
+.pcard:disabled{cursor:default;opacity:1}
+.pcard.facedown{border-color:var(--gilt);color:var(--gilt);cursor:default;background:repeating-linear-gradient(45deg,var(--leaf-2) 0 6px,var(--leaf) 6px 12px)}
+.deck-note{font:.82rem/1.45 var(--f-ui);color:var(--ink-dim);margin:8px 0 0}
+.deck-note b{color:var(--ink)}
+.deck-sub{font:700 .7rem var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--gilt);margin:16px 0 0}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 6px}
+.slots .pcard{padding:5px 6px}.slots .pcard .rk{font-size:1.05rem}.slots .pcard .mid{font-size:1.5rem}
+.slot>span{display:block;font:700 .66rem var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:4px}
+.cardrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0 4px}
+.cardrow .pcard{padding:5px 6px}.cardrow .pcard .rk{font-size:1.05rem}.cardrow .pcard .mid{font-size:1.5rem}
+.peek{display:flex;flex-direction:column;gap:6px}
+.peek .btn{padding:4px 0;min-height:32px}
+.peek-first{font:700 .66rem var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);text-align:center;padding:8px 0}
+.marks{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.marks span{font:.78rem var(--f-ui);color:var(--ink-dim)}
+.mark{font:500 .82rem var(--f-ui);border:1px solid var(--rule);background:var(--leaf);border-radius:999px;padding:6px 12px;cursor:pointer}
+.mark[aria-pressed="true"]{color:var(--ink-dim);text-decoration:line-through}
+.tac-panel{margin-top:12px}
+.fieldrow{display:flex;flex-direction:column;gap:4px;margin:0 0 12px}
+.fieldrow>span{font:700 .7rem var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--gilt)}
+.fieldrow select{width:100%;min-height:42px}
+.decklist{display:flex;flex-wrap:wrap;gap:8px 12px}
+.decklist>span{display:inline-flex;align-items:center;gap:6px}
+.decklist b{font:700 .95rem var(--f-ui)}
+.tac-panel .fold{margin-top:12px}
 .btn[disabled]{opacity:.4;cursor:default}
 
 /* sealed tomes */

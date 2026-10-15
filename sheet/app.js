@@ -13,13 +13,8 @@ const RAR = PD.rarities;
 const MATERIALS = [['Oak',0],['Bronze',0],['Iron',0],['Steel',1],['D-Iron',1],['Silv-Steel',1],['D-Steel',2],['Etherian',2],['Lyran Stone',2],['Glacius',3],['Aurausheen',3],['Mag-Glass',4],['Druiniun',4],['Pitch',5],['PriGlass',6],['PriSteel',7]];
 const WEAPONS = ['Sword','Dagger','One Handed Axe','Mace','Spear','Greatsword','Battle Axe','Warhammer','Bow','Crossbow','Staff or Focus','Other'];
 const ARMOR_SLOTS = ['Head / Neck','Chest','Arms','Legs / Feet','Shield'];
-const DEFAULT_MAP = {Basic:'2 through 6, black 7s',Common:'Red 7s, 8 through 10, black Jacks',Uncommon:'Red Jacks, Queens, black Kings',Rare:'Red Kings, black Aces',Epic:'Red Aces',Legendary:'Joker',Mythic:''};
-// Tactics perks that change the deck
-const DECK_FX = {'Improved Tactics':{Basic:-4,Common:4,_:'Promote one Basic number to Common'},'Trained Tactics':{Uncommon:-4,Rare:4,_:'Promote one Uncommon number to Rare'},
-  'Seasoned Tactics':{Common:-4,Uncommon:4,Rare:-2,Epic:2,_:'Promote one Common number to Uncommon and one Rare color to Epic'},'Wild Card':{Legendary:1,_:'Add the second joker (wild, up to Legendary)'},
-  'Focused Training':{Rare:-2,Epic:2,_:'Promote one Rare color to Epic'},'Specialist':{Uncommon:-4,Rare:4,_:'Promote one Uncommon number to Rare'},'Mastery':{Epic:-2,Legendary:2,_:'Promote two Epic cards to Legendary'},
-  'Grand Strategy':{Legendary:-1,Mythic:1,_:'Promote the joker to Mythic'},"Officer's Training":{Common:-4,Uncommon:4,_:'Promote one Common number to Uncommon'},'Veteran Command':{Epic:-1,Legendary:1,_:'Promote one Epic card to Legendary'}};
-let db = load(); let current = null; let tab = 'overview'; let editList = false; const openGroups = new Set();
+const DK = window.PrimordiumDeck, DICE = window.PrimordiumDice;
+let db = load(); let current = null; const tray = {pool: [], mod: 0, rolls: []}; let tab = 'overview'; let editList = false; const openGroups = new Set();
 const DAMAGING = ['Bleed','Flame','Poison','Acid'];
 const has = (c, perk) => granted(c).some(i => i.name === perk);
 const startNeed = c => has(c, 'Trained Resilience') ? 3 : 4;
@@ -30,13 +25,12 @@ let saveTimer; function save() { clearTimeout(saveTimer); saveTimer = setTimeout
 function saveNow() { clearTimeout(saveTimer); localStorage.setItem(KEY, JSON.stringify(db)); }
 function blank(name) {
   const c = { id: Date.now().toString(36), name, race: '', level: 1, xp: 0, marks: 0, stats: {}, hpBase: 40, hpOther: 0, hpCur: 40, hpTemp: 0, armorOther: 0,
-    trin: {dmg:'', a:'', b:''}, mode: 'standard', aug: [], death: 0, breather: false, deckMap: {...DEFAULT_MAP}, suit: '',
+    trin: {dmg:'', a:'', b:''}, mode: 'standard', aug: [], death: 0, breather: false, suit: '',
     items: [], abilities: [], traits: [], resist: '', notes: '', skills: {} };
   STATS.forEach(s => c.stats[s] = 0); return c;
 }
 function upgrade(c) {  // characters saved by earlier versions
   c.trin ??= {dmg:'', a:'', b:''}; c.armorOther ??= n(c.armor); c.skills ??= {}; c.traits ??= []; c.abilities ??= []; c.mode ??= 'standard';
-  c.deckMap ??= {...DEFAULT_MAP};
   if (!c.items) {
     c.items = [];
     (c.equip || []).forEach((e, i) => e.item && c.items.push({id: uid(), name: e.item, desc: '', qty: 1, equipped: true, kind: 'armor', slot: ARMOR_SLOTS[Math.min(i, 3)], weight: 'heavy', material: '', tier: n(e.tier), armor: n(e.armor), cond: e.cond, special: ''}));
@@ -55,12 +49,16 @@ function upgrade(c) {  // characters saved by earlier versions
 // ---------- what skills grant (shared with the GM tool: ../shared/character-rules.js) ----------
 const granted = PrimordiumCharacter.granted;
 function tierItems(c, k, kind, t) { const d = SK[k], s = c.skills[k] || {}; return kind === 'base' ? [...(t === 1 ? (d.base[0] || []) : []), ...(d.base[t] || [])] : ((d.paths[s.path] || {})[t] || []); }
-function deck(c) {
-  const d = {}; RAR.forEach(r => d[r] = n(PD.startDeck[r])); const names = new Set(granted(c).filter(i => i.skill === 'Tactics').map(i => i.name));
-  for (const [p, fx] of Object.entries(DECK_FX)) if (names.has(p)) for (const [r, v] of Object.entries(fx)) if (r !== '_') d[r] += v;
-  return d;
+// ---------- the tactical deck (rules shared with the Codex: ../shared/tactics-deck.js) ----------
+const tacLevel = c => { const s = c.skills.Tactics || {}; return {base: n(s.base), path: s.path || '', ptier: n(s.ptier)}; };
+const deckBuild = c => DK.build(tacLevel(c), c.deckPicks || {}, c.suit || '');
+const deck = c => deckBuild(c).counts;
+const deckState = (c, b = deckBuild(c)) => (c.deck = DK.fit(c.deck, b));
+// ---------- dice tray (kept until the page closes; results also show as a toast) ----------
+function logRoll(label, r, extra = '') {
+  tray.rolls.unshift({label, total: r.total, parts: r.parts.join(' '), extra}); tray.rolls.length = Math.min(tray.rolls.length, 5);
+  toast([`${label}: ${r.total}`, r.parts.join(' ') + (extra ? ' · ' + extra : '')]); charView(current.id);
 }
-function suits(c) { const names = new Set(granted(c).filter(i => i.skill === 'Tactics').map(i => i.name)); if (names.has('Full Deck')) return 'All four suits (double when every card shares a suit)'; return names.has('Suit Mastery') ? (c.suit || 'Choose a suit below') : 'None yet (Tactics Base Tier 2)'; }
 // ---------- totals ----------
 function totals(c) {
   const { st, hpSkill, natural, worn, maxhp, race } = PrimordiumCharacter.core(c);
@@ -153,10 +151,10 @@ const views = {
       ? `<div class="hpline"><button class="big" data-hp="-1" aria-label="Lose 1 HP">−</button><div class="hpnum"><input type="number" inputmode="numeric" data-p="hpCur" value="${esc(current.hpCur)}" aria-label="Current HP"><small>of ${T.maxhp} HP</small></div><button class="big" data-hp="1" aria-label="Gain 1 HP">+</button></div>`
       : `<div class="hpnum still"><b>${esc(current.hpCur)}</b><small>of ${T.maxhp} HP${n(current.hpTemp) ? ` · ${n(current.hpTemp)} temporary` : ''}</small></div>`}
       <div class="bar"><i style="width:${Math.max(0, Math.min(100, Math.round(100 * n(current.hpCur) / Math.max(1, T.maxhp))))}%"></i></div>
-      ${combat ? `<div class="row2">${field('Temporary HP','hpTemp',{num:1})}<div class="clockwrap"><span>Death clock</span><div class="clock">${[1,2,3].map(i => `<button class="pip ${current.death >= i ? 'on' : ''}" data-death="${i}" aria-label="Death clock phase ${i}">${i}</button>`).join('')}</div></div></div>` : ''}
+      <div class="row2">${combat ? field('Temporary HP','hpTemp',{num:1}) : `<div class="field"><span>Temporary HP</span><output class="still">${n(current.hpTemp)}</output></div>`}<div class="clockwrap"><span>Death clock</span><div class="clock">${[1,2,3].map(i => `<button class="pip ${current.death >= i ? 'on' : ''}" ${combat ? `data-death="${i}"` : 'disabled'} aria-label="Death clock phase ${i}">${i}</button>`).join('')}</div></div></div>
       <div class="row3">${stat('Armor', T.armor)}${stat('Movement', moveText(S.SPD))}${stat('Initiative', 'D10 ' + (S.PER >= 0 ? '+ ' : '- ') + Math.abs(S.PER))}</div></section>`;
-    const stats = `<section><h2>Stats</h2><div class="statgrid">${STATS.map(s => `<div class="stat ${S[s] !== T.st[s] ? 'temp' : (T.st[s] !== n(current.stats[s]) ? 'boosted' : '')}"><span>${STATN[s]}</span><b>${S[s]}</b>${combat ? `<div class="adj"><button data-tmp="${s}" data-by="-1" aria-label="Temporarily lower ${STATN[s]}">−</button><small>${S[s] !== T.st[s] ? 'temp' : ''}</small><button data-tmp="${s}" data-by="1" aria-label="Temporarily raise ${STATN[s]}">+</button></div>` : ''}</div>`).join('')}</div>
-      ${combat ? '<p class="note">Changes here are temporary and clear when combat ends.</p>' : ''}</section>`;
+    const stats = `<section><h2>Stats</h2><div class="statgrid">${STATS.map(s => `<div class="stat ${S[s] !== T.st[s] ? 'temp' : (T.st[s] !== n(current.stats[s]) ? 'boosted' : '')}"><span>${STATN[s]}</span><b>${S[s]}</b>${`<div class="adj${combat ? '' : ' ghost'}" ${combat ? '' : 'aria-hidden="true"'}><button data-tmp="${s}" data-by="-1" aria-label="Temporarily lower ${STATN[s]}">−</button><small>${S[s] !== T.st[s] ? 'temp' : ''}</small><button data-tmp="${s}" data-by="1" aria-label="Temporarily raise ${STATN[s]}">+</button></div>`}</div>`).join('')}</div>
+      <p class="note">${combat ? 'Changes here are temporary and clear when combat ends.' : 'Turn on Combat to change stats for a fight.'}</p></section>`;
     const notes = T.notes.length ? `<section class="alerts">${T.notes.map(x => `<p>${esc(x)}</p>`).join('')}</section>` : '';
     const augs = `<section><div class="listbar"><h2>Effects</h2>${combat ? '<button class="btn small" data-act="addaug">+ Add</button>' : ''}</div>
       ${current.aug.length ? current.aug.map(a => `<div class="rec ${a.cat === 'stack' && current.mode === 'combat' ? 'stackrec' : ''}"><div><b>${esc(a.type)}</b><small>${esc({stack:'Stack',resource:'Resource',condition:'Condition',stat:'Stat effect'}[a.cat])}${a.cat === 'stat' ? ` · ${n(a.amount) > 0 ? '+' : ''}${n(a.amount)} ${STATN[a.stat]}` : ''}${a.cat === 'condition' && a.stat ? ` · −${Math.abs(n(a.amount))} ${STATN[a.stat]}` : ''}${a.source ? ' · ' + esc(a.source) : ''}</small>
@@ -164,18 +162,29 @@ const views = {
         ${combat && a.cat === 'stack' ? `<button class="btn small rec-btn" data-recover="${a.id}" aria-label="Recovery roll for ${esc(a.type)}">Recover</button>` : ''}
         ${combat ? (a.cat === 'stack' || a.cat === 'resource' ? `<div class="mini"><button data-aug="${a.id}" data-by="-1" aria-label="Lower ${esc(a.type)}">−</button><output>${n(a.count)}</output><button data-aug="${a.id}" data-by="1" aria-label="Raise ${esc(a.type)}">+</button></div>` : '') + `<button class="x" data-rmaug="${a.id}" aria-label="Remove ${esc(a.type)}">×</button>` : (a.cat === 'stack' || a.cat === 'resource' ? `<output>${n(a.count)}</output>` : '')}</div>`).join('')
         : `<p class="note">${combat ? 'Add stacks, resources, conditions, and temporary stat effects with + Add.' : 'No active effects.'}</p>`}</section>`;
-    if (!combat) return head + hp + stats + notes + augs + `<section><h2>Equipped</h2>${equippedList()}</section>`;
+    const sg = v => (v >= 0 ? '+ ' : '- ') + Math.abs(v), ex = DICE.poolExpr(tray.pool, tray.mod);
+    const dice = `<section class="dice"><h2>Dice</h2>
+      <div class="tray">${[4, 6, 8, 10, 12, 20].map(f => { const k = tray.pool.filter(x => x === f).length; return `<button class="die" data-addie="${f}" aria-label="Add a D${f}">D${f}${k ? `<small>×${k}</small>` : ''}</button>`; }).join('')}</div>
+      <div class="poolrow"><code>${ex ? esc(ex) : 'Tap dice to build a roll'}</code><div class="mini"><button data-trmod="-1" aria-label="Minus one">−1</button><button data-trmod="1" aria-label="Plus one">+1</button></div></div>
+      <div class="row2"><button class="btn" data-act="trroll" ${ex ? '' : 'disabled'}>Roll${ex ? ' ' + esc(ex) : ''}</button><button class="btn ghost" data-act="trclear">Clear</button></div>
+      <div class="quickrolls"><button class="tog" data-qroll="init">Initiative D10 ${sg(S.PER)}</button><button class="tog" data-qroll="speed">Speed roll D10 ${sg(S.SPD)}</button><button class="tog" data-qroll="ooc">Out of combat D10</button></div>
+      <p class="note">Contest: D10 + stat. Ties go to the defender.</p><div class="contest">${STATS.map(k => `<button class="tog" data-qroll="stat" data-stat="${k}">${k} ${sg(S[k])}</button>`).join('')}</div>
+      ${tray.rolls.length ? `<ol class="rolls">${tray.rolls.map(r => `<li><span><b>${esc(r.label)}</b><small>${esc(r.parts)}${r.extra ? ' · ' + esc(r.extra) : ''}</small></span><output>${r.total}</output></li>`).join('')}</ol>` : ''}</section>`;
+    const db1 = deckBuild(current);
+    const cards = combat ? `<section class="deck"><div class="listbar"><h2>Cards</h2><span class="note">Tactics ${esc(DK.levelLabel(tacLevel(current)))}</span></div>
+      <div class="decklist">${RAR.map(r => db1.counts[r] ? `<span class="r-${r}"><b>${db1.counts[r]}</b> ${r}</span>` : '').join('')}</div>
+      ${DK.render(deckState(current, db1), db1)}</section>` : '';
+    if (!combat) return head + hp + stats + notes + dice + augs + `<section><h2>Equipped</h2>${equippedList()}</section>`;
     const g = granted(current); const ab = g.filter(i => i.kind === 'ability').sort((a, b) => RAR.indexOf(a.rarity) - RAR.indexOf(b.rarity) || a.name.localeCompare(b.name));
     const pk = g.filter(i => i.kind === 'perk'); const sel = ab.find(a => a.skill + '|' + a.name === current.abilityPick);
-    return head + hp + notes + augs + stats + `
+    return head + hp + stats + notes + dice + cards + augs + `
       <section><h2>Abilities</h2>${ab.length ? `<label class="field"><span>Choose an ability</span><select id="abilityPick"><option value="">Select to see its details</option>${RAR.map(r => { const l = ab.filter(a => a.rarity === r); return l.length ? `<optgroup label="${r}">${l.map(a => `<option value="${esc(a.skill + '|' + a.name)}" ${sel === a ? 'selected' : ''}>${esc(a.name)} · ${esc(a.rarity)}</option>`).join('')}</optgroup>` : ''; }).join('')}</select></label>
         ${sel ? `<div class="card"><b>${esc(sel.name)}</b><small>${esc(sel.skill)} · ${esc(sel.type)} · ${esc(sel.rarity)}</small><p><i>${esc(sel.desc)}</i></p><p>${esc(sel.usage)}</p></div>` : ''}` : '<p class="note">Train skills to gain abilities.</p>'}</section>
       <section><details class="perks"><summary><h2>Perks (${pk.length})</h2></summary>${pk.map(detail).join('') || '<p class="note">No perks yet.</p>'}</details></section>
-      <section><h2>Deck</h2><div class="decklist">${RAR.map(r => { const d = deck(current)[r]; return d ? `<span><b>${d}</b> ${r}</span>` : ''; }).join('')}</div><p class="note">Suit riders: ${esc(suits(current))}</p></section>
       <section class="actions"><button class="btn ghost" data-act="endcombat">End combat</button><button class="btn ghost" data-act="breather" ${current.breather ? 'disabled' : ''}>${current.breather ? 'Breather used today' : 'Take a breather'}</button><button class="btn" data-act="rest">Full rest</button>
         <p class="note">End combat clears resources, conditions, and temporary stat effects. A breather restores 25% of max HP and clears stacks once per day. A full rest restores everything.</p></section>`;
   },
-  sheet: T => { const race = D.races[current.race]; const dk = deck(current); const hasSuit = granted(current).some(i => i.name === 'Suit Mastery');
+  sheet: T => { const race = D.races[current.race]; const b = deckBuild(current);
     return `
     <section><h2>Character</h2>
       <div class="row2">${field('Name','name')}${select('Race','race',Object.keys(D.races),'Choose a race')}</div>
@@ -187,10 +196,12 @@ const views = {
       <p class="note">Large numbers include race choices, traits, and skills. Damage modifier per die: +½ per D4 or D6, +1 per D8 to D12, +2 per D20.</p></section>
     <section><h2>Health and armor</h2><div class="row3">${field('Base HP (race)','hpBase',{num:1})}${stat('Skills and traits','+' + T.hpSkill)}${field('Other HP','hpOther',{num:1})}</div>
       <div class="row3">${stat('Max HP', T.maxhp, 'adds 25 every 5th level')}${stat('Natural armor', T.natural)}${field('Other armor','armorOther',{num:1})}</div></section>
-    <section><h2>Card assignment</h2><p class="note">Counts include your Tactics promotions. Adjust the cards in each rarity to match.</p>
-      ${RAR.map(r => `<div class="maprow"><b>${dk[r]}</b><span>${r}</span><input type="text" data-p="deckMap.${r}" value="${esc(current.deckMap[r] ?? '')}" placeholder="Which cards"></div>`).join('')}
-      ${hasSuit && !granted(current).some(i => i.name === 'Full Deck') ? select('Suit Mastery suit','suit',['Spades','Hearts','Diamonds','Clubs'],'Choose a suit') : ''}
-      <p class="note">Suit riders: ${esc(suits(current))}</p></section>
+    <section><h2>Card assignment</h2><p class="note">Tactics ${esc(DK.levelLabel(tacLevel(current)))}. Counts include your Tactics promotions.</p>
+      ${RAR.filter(r => b.counts[r]).map(r => `<div class="maprow r-${r}"><b>${b.counts[r]}</b><span>${r}</span><small>${esc(b.mapping[r])}</small></div>`).join('')}
+      ${b.f.wild ? `<p class="note">Jokers are wild: each counts as any rarity up to ${b.f.wildCap}.</p>` : ''}
+      ${b.steps.map(st => `<label class="field"><span>${esc(st.perk)}: ${esc(st.label)}</span><select data-promo="${esc(st.key)}">${st.options.map(o => `<option value="${esc(o.v)}" ${o.v === st.value ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`).join('')}
+      ${b.needsSuit ? select('Suit Mastery suit','suit',['Spades','Hearts','Diamonds','Clubs'],'Choose a suit') : ''}
+      <p class="note">Suit riders: ${esc(b.f.fullDeck ? 'All four suits (double when every card shares a suit)' : b.f.suitMastery ? (current.suit || 'Choose a suit above') : 'None yet (Tactics Base Tier 2)')}</p></section>
     <section><h2>Background traits</h2>${(() => { const tc = current.traits.reduce((a, t) => a + n(t.cost), 0); return `<p class="note">Chosen at creation and never changed. Total cost: <b class="${tc > 2 ? 'warn' : ''}">${tc}</b> of 2.</p>`; })()}
       ${current.traits.map((t, i) => `<div class="rec"><div><b>${esc(t.name)}</b><small>Cost ${esc(t.cost)} · ${esc(t.effect)}</small></div><button class="x" data-del="traits.${i}" aria-label="Remove ${esc(t.name)}">×</button></div>`).join('')}
       <label class="field"><span>Add a trait</span><select id="traitPick"><option value="">Choose a trait</option>${['Physical','Mental','Major'].map(c => `<optgroup label="${c}">${D.traits.filter(t => t.category === c).map(t => `<option value="${esc(t.name)}">${esc(t.name)} (${t.cost})</option>`).join('')}</optgroup>`).join('')}</select></label></section>
@@ -243,7 +254,7 @@ function stepSkill(k, kind, by) {
   const T = totals(current), deck1 = deck(current);
   if (T.maxhp !== T0.maxhp) { current.hpCur = by > 0 ? n(current.hpCur) + (T.maxhp - T0.maxhp) : Math.min(n(current.hpCur), T.maxhp); lines.push(`Max HP is now ${T.maxhp}`); }
   const dchg = RAR.filter(r => deck1[r] !== deck0[r]).map(r => `${r} ${deck0[r]} → ${deck1[r]}`);
-  if (dchg.length) { const fx = items.map(i => DECK_FX[i.name]?._).filter(Boolean); lines.push(`Deck: ${dchg.join(', ')}`); if (by > 0 && fx.length) lines.push(fx.join('; ') + ' in your card assignment'); }
+  if (dchg.length) { lines.push(`Deck: ${dchg.join(', ')}`); if (by > 0 && deckBuild(current).steps.length) lines.push('Choose which cards are promoted under Card assignment on the Sheet tab'); }
   if (T.earned - T.spent < 0) lines.push(`Over budget by ${T.spent - T.earned} skill point${T.spent - T.earned > 1 ? 's' : ''}`);
   toast(lines.length > 1 ? lines : [head, 'No new abilities or perks at this tier.']); rerender();
 }
@@ -297,12 +308,13 @@ document.addEventListener('input', e => {
   if (p === 'race') { applyRace(e.target.value); return rerender(); }
   save();
   if (p.endsWith('.path')) { const k = p.split('.')[1]; if (e.target.value) toast([`${k}: ${e.target.value} chosen`, 'Raise its path tier to unlock the path\'s abilities.']); return charView(current.id); }
-  if (['level','hpBase','hpOther','armorOther','trin.dmg','trin.a','trin.b','hpCur'].includes(p) || p.startsWith('trin.')) { if (e.target.tagName === 'SELECT') charView(current.id); }
+  if (['level','hpBase','hpOther','armorOther','trin.dmg','trin.a','trin.b','hpCur','suit'].includes(p) || p.startsWith('trin.')) { if (e.target.tagName === 'SELECT') charView(current.id); }
 });
 document.addEventListener('change', e => {
   const id = e.target.id;
   if (id === 'traitPick' && e.target.value) { const t = D.traits.find(x => x.name === e.target.value); current.traits.push({...t}); toast([`Trait added: ${t.name}`, t.effect, ...(traitFx(t).length ? ['Applied to your stats'] : [])]); return rerender(); }
   if (id === 'abilityPick') { current.abilityPick = e.target.value; return rerender(); }
+  if (e.target.dataset.promo) { (current.deckPicks ??= {})[e.target.dataset.promo] = e.target.value; return rerender(); }
   if (id === 'kindPick') { const f = $('#equipForm'); const it = current.items.find(i => i.id === f.dataset.id); it.kind = e.target.value; return itemSheet(it.id); }
   if (id === 'matPick') { const o = e.target.selectedOptions[0]; if (o?.dataset.tier !== undefined) $('#tierBox').value = o.dataset.tier; return; }
   if (e.target.dataset.p && ['level','hpBase','hpOther','armorOther','hpCur','hpTemp'].includes(e.target.dataset.p)) charView(current.id);
@@ -322,6 +334,15 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
+  if (d.deck) { DK.act(deckState(current), deckBuild(current), d.deck, d.i); return rerender(); }
+  if (d.addie) { tray.pool.push(Number(d.addie)); return charView(current.id); }
+  if (d.trmod) { tray.mod += Number(d.trmod); return charView(current.id); }
+  if (d.qroll) { const L = totals(current).live;
+    if (d.qroll === 'init') return logRoll('Initiative', DICE.roll(DICE.withMod('D10', L.PER)));
+    if (d.qroll === 'speed') { const r = DICE.roll(DICE.withMod('D10', L.SPD)); return logRoll('Speed roll', r, `move ${Math.max(2, r.total)}M`); }
+    if (d.qroll === 'ooc') { const r = DICE.roll('D10'), best = r.total >= 9 ? 'Legendary' : r.total >= 7 ? 'Epic' : r.total >= 4 ? 'Rare' : ''; return logRoll('Out of combat', r, best ? 'succeeds up to ' + best : 'Rare and above fail'); }
+    if (d.qroll === 'stat') return logRoll(`${STATN[d.stat]} contest`, DICE.roll(DICE.withMod('D10', L[d.stat])));
+  }
   if (d.open) return charView(d.open, 'overview');
   if (d.delchar) { const c = db[d.delchar]; if (confirm(`Delete ${c.name || 'this character'}? This can not be undone unless you have a backup.`)) { delete db[d.delchar]; saveNow(); toast([`Deleted ${c.name || 'character'}`]); } return listView(); }
   if (d.act === 'editlist') { editList = !editList; return listView(); }
@@ -347,10 +368,14 @@ document.addEventListener('click', e => {
     case 'mode': current.mode = current.mode === 'combat' ? 'standard' : 'combat'; return rerender();
     case 'addaug': return augStep(1);
     case 'closesheet': return sheet.close();
+    case 'trroll': { const ex = DICE.poolExpr(tray.pool, tray.mod); return ex ? logRoll('Roll', DICE.roll(ex)) : undefined; }
+    case 'trclear': tray.pool = []; tray.mod = 0; return charView(current.id);
     case 'addother': current.abilities.push({name: '', skill: ''}); return rerender();
-    case 'endcombat': current.aug = current.aug.filter(a => a.cat === 'stack'); current.death = 0; toast(['Combat ended', 'Resources, conditions, and temporary stat effects cleared. Stacks remain until treated.']); return rerender();
-    case 'breather': { const T = totals(current); current.hpCur = Math.min(T.maxhp, n(current.hpCur) + Math.floor(T.maxhp / 4)); current.aug = current.aug.filter(a => a.cat !== 'stack'); current.breather = true; toast(['Breather taken', `+${Math.floor(T.maxhp / 4)} HP, stacks cleared. Recover 8 cards from your discard pile.`]); return rerender(); }
-    case 'rest': current.hpCur = totals(current).maxhp; current.hpTemp = 0; current.aug = []; current.death = 0; current.breather = false; current.mode = 'standard'; toast(['Full rest taken', 'HP restored, effects cleared, deck reshuffled, breather ready.']); return rerender();
+    case 'endcombat': current.aug = current.aug.filter(a => a.cat === 'stack'); current.death = 0; DK.act(deckState(current), deckBuild(current), 'combat'); toast(['Combat ended', 'Resources, conditions, and temporary stat effects cleared. Stacks remain until treated.', 'Once-per-combat card abilities are ready again.']); return rerender();
+    case 'breather': { const T = totals(current); current.hpCur = Math.min(T.maxhp, n(current.hpCur) + Math.floor(T.maxhp / 4)); current.aug = current.aug.filter(a => a.cat !== 'stack'); current.breather = true;
+      const b = deckBuild(current), ds = deckState(current, b); DK.act(ds, b, 'breather');
+      toast(['Breather taken', `+${Math.floor(T.maxhp / 4)} HP, stacks cleared.`, ds.pick ? 'Choose the cards to keep under Cards.' : 'The top 8 cards of your discard pile went back into your deck.']); return rerender(); }
+    case 'rest': current.hpCur = totals(current).maxhp; current.hpTemp = 0; current.aug = []; current.death = 0; current.breather = false; current.mode = 'standard'; DK.act(deckState(current), deckBuild(current), 'rest'); toast(['Full rest taken', 'HP restored, effects cleared, deck reshuffled, breather ready.']); return rerender();
     case 'delete': if (confirm(`Delete ${current.name || 'this character'}? This can not be undone unless you have a backup.`)) { delete db[current.id]; saveNow(); listView(); } return;
   }
 });

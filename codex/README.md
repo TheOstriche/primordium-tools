@@ -10,6 +10,7 @@ Live at `https://theostriche.github.io/primordium-tools/codex/`.
 |---|---|
 | `../shared/primordium-data.js` | Every skill (all tiers, paths, abilities, perks), race stats and specials, background traits. Shared with the sheet and the GM tool. |
 | `../shared/npc-data.js` | All creatures. Shared with the GM tool. |
+| `../shared/tactics-deck.js`, `../shared/dice.js` | The tactical deck (cards, promotions, and every Tactics mechanic) and dice rolls. Shared with the sheet. |
 | `codex-data.js` | What only the Codex shows: rules sections, tables (tactics, deck, wealth, materials, consumables, enchantments, sizes, XP roles), race lore (country, deity, appearance), skill summaries and A/S/K stat, creature family groups and descriptions. Hand-transcribed from Game Guide 2.0 and NPC Guide 2.0. |
 
 `app.js` reshapes the shared data for the Codex when the page loads. There is no build step: edit a data file, refresh, done.
@@ -43,7 +44,6 @@ Per-phone state (last tab, tactics level, roll history, deck) is kept in `localS
 
 These show on the Codex home screen as "Sealed tomes".
 
-- **Tactics skill in the deck simulator:** pick a player's Tactics level and path (Gambler, Strategist, Commander) and adjust card assignment and riders to match.
 - **Encounter roll:** a D10 decides the encounter. Details still to come from the GM.
 - **Tongue-Forge:** names and words for each race's language (racial language names still to be written).
 - **Quick-Spawn:** one-tap NPCs built on the NPC Guide's stat budget.

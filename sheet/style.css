@@ -132,3 +132,52 @@ details.group[open] summary{margin-bottom:6px}
 .rec-btn{min-height:40px;padding:8px 12px}
 .rec.stackrec>div:first-child{flex-basis:100%}
 .rec.stackrec .rec-btn{margin-right:auto}
+/* ---------- version 5: dice tray and tactical deck (deck markup from ../shared/tactics-deck.js) ---------- */
+:root{--r-basic:#9b98a6;--r-common:#d2c9b4;--r-uncommon:#76c27a;--r-rare:#6aa2ec;--r-epic:#b884ea;--r-legendary:#eab14c;--r-mythic:#f0685d}
+.r-Basic{--rc:var(--r-basic)}.r-Common{--rc:var(--r-common)}.r-Uncommon{--rc:var(--r-uncommon)}.r-Rare{--rc:var(--r-rare)}
+.r-Epic{--rc:var(--r-epic)}.r-Legendary{--rc:var(--r-legendary)}.r-Mythic{--rc:var(--r-mythic)}
+.decklist [class^="r-"]{color:var(--rc)}.decklist [class^="r-"] b{color:var(--bone)}
+.maprow{grid-template-columns:34px 82px 1fr}.maprow span{color:var(--rc);font-weight:600}.maprow small{color:var(--muted);font-size:13px}
+.tray{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.die{position:relative;min-height:48px;padding:0;color:var(--bone);background:var(--ink2);border:1px solid var(--line);border-radius:8px;font:700 15px var(--sans)}
+.die small{position:absolute;top:2px;right:4px;font-size:11px;color:var(--gold)}
+.poolrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.poolrow code{font:600 15px ui-monospace,Consolas,monospace;color:var(--muted);overflow-wrap:anywhere}
+.dice .row2 .btn{margin-top:8px}
+.quickrolls,.contest{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.contest{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:6px}
+.quickrolls .tog,.contest .tog{min-height:40px;padding:8px 10px;font-size:13px}
+.rolls{list-style:none;margin:10px 0 0;padding:0}
+.rolls li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.rolls li span{display:flex;flex-direction:column;min-width:0}.rolls b{font:700 15px var(--serif)}.rolls small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.rolls output{font:700 22px var(--serif);color:var(--gold)}
+.deck .decklist{margin-bottom:4px}
+.deckbar{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:13px;color:var(--muted)}.deckbar b{color:var(--bone)}
+.hand{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 8px}
+.pcard{min-width:0;aspect-ratio:5/7;display:flex;flex-direction:column;justify-content:space-between;padding:7px 8px;text-align:left;color:var(--rc);background:var(--ink2);border:2px solid var(--rc);border-radius:10px;transition:transform .15s,box-shadow .15s}
+.pcard .rk{font:700 21px/1 var(--sans)}.pcard .rk small{display:block;font-size:16px;margin-top:2px}
+.pcard .mid{align-self:center;font-size:32px;line-height:1}
+.pcard .lbl{align-self:flex-end;max-width:100%;overflow:hidden;white-space:nowrap;font:700 9px var(--sans);letter-spacing:.08em;text-transform:uppercase}
+.pcard[aria-pressed="true"]{transform:translateY(-6px);box-shadow:0 0 0 3px var(--gold)}
+.pcard:disabled{opacity:1}
+.pcard.empty{justify-content:center;align-items:center;color:var(--muted);border:2px dashed var(--line);font-size:12px}
+.pcard.facedown{border-color:var(--gold);color:var(--gold);background:repeating-linear-gradient(45deg,var(--ink2) 0 6px,var(--ink) 6px 12px)}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 6px}
+.slot>span{display:block;margin-bottom:4px;font-size:11px;color:var(--muted)}
+.slots .pcard,.cardrow .pcard{padding:5px 6px}.slots .pcard .rk,.cardrow .pcard .rk{font-size:16px}.slots .pcard .mid,.cardrow .pcard .mid{font-size:22px}
+.cardrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.peek{display:flex;flex-direction:column;gap:6px}.peek-first{text-align:center;font-size:12px;color:var(--muted);padding:8px 0}
+.deck-note,.deck-log{margin:8px 0 0;font-size:13px;color:var(--muted)}.deck-note b,.deck-log b{color:var(--bone)}
+.deck-log{min-height:1.4em}
+.deck-sub{margin:14px 0 0;font:700 12px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.deck .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.deck .btns .btn{width:auto;flex:1 1 auto;margin:0;padding:10px 12px;min-height:44px;font-size:14px}
+.marks{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}.marks span{font-size:12px;color:var(--muted)}
+.mark{min-height:40px;padding:8px 12px;color:var(--bone);background:none;border:1px solid var(--line);border-radius:20px;font:14px var(--sans)}
+.mark[aria-pressed="true"]{color:var(--muted);text-decoration:line-through}
+@media (prefers-reduced-motion:reduce){.pcard{transition:none}}
+/* the overview keeps the same layout in both modes: these hold their space outside combat */
+.adj.ghost{visibility:hidden}
+.field output.still{display:block;padding:10px;font:16px var(--sans);border:1px solid transparent}
+.pip:disabled{opacity:.6}.pip.on:disabled{opacity:1}
+.hpnum.still{min-height:97px;display:flex;flex-direction:column;justify-content:center}

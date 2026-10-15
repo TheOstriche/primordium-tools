@@ -8,6 +8,8 @@ One repository (`TheOstriche/primordium-tools`, published with GitHub Pages) hol
 - `shared/primordium-data.js`: sets `window.PRIMORDIUM_DATA` (skills with every tier's abilities and perks, races, traits). It is the **only** copy; all three apps load it with `../shared/primordium-data.js`. Put new data that more than one app needs in `shared/`, not inside one app.
 - `shared/npc-data.js`: sets `window.PRIMORDIUM_NPCS` (all creatures from the NPC Guide). The GM tool and the Codex load it.
 - `shared/character-rules.js`: sets `window.PrimordiumCharacter` (what skills grant, and a character's stats, maximum HP, and armor). The sheet computes its totals with it, and the GM tool uses it to import sheet backups, so the two always agree.
+- `shared/tactics-deck.js`: sets `window.PrimordiumDeck`, the tactical deck: builds the cards from a Tactics level (base tier, path, path tier, promotion choices) and runs a hand with every Tactics mechanic. The Codex (any level, picked from a list) and the sheet (the character's own Tactics) both use it, including its HTML. `node tools/test-deck.js` checks it.
+- `shared/dice.js`: sets `window.PrimordiumDice` (dice expressions like `2D6+3`), used by the Codex and the sheet.
 - `index.html`: landing page linking all three apps.
 - `tools/serve.js`: local server for the whole repository (port 8080). `tools/old-sheet-redirect/`: files that replace the old `Primordium-Player-Sheets` repository's contents.
 
