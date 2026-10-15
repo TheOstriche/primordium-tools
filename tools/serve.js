@@ -1,5 +1,5 @@
-// Optional tiny web server for testing both apps the way GitHub Pages serves them.
-// Run:  node tools/serve.js   then visit http://localhost:8080 (GM tool at /gm/, player sheet at /sheet/)
+// Optional tiny web server for testing the apps the way GitHub Pages serves them.
+// Run:  node tools/serve.js   then visit http://localhost:8080 (GM tool at /gm/, player sheet at /sheet/, Codex at /codex/)
 const http = require('http');
 const fs = require('fs');
 const path = require('path');

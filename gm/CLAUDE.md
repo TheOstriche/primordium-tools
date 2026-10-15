@@ -11,7 +11,7 @@ A laptop web app for running combat in **Primordium 2.0**, an original tabletop 
 - **Rules** follow `docs/rules.md` exactly. When something is unclear, ask the owner rather than inventing a rule.
 
 ## Features (build in this order)
-1. **Encounter setup:** a party roster (players entered manually and reused between sessions) and an enemy picker using all creatures in `data/npc-data.js`, searchable and filterable by family, level, and role, with quantity. Show the encounter's total XP and a difficulty estimate.
+1. **Encounter setup:** a party roster (players entered manually and reused between sessions) and an enemy picker using all creatures in `../shared/npc-data.js`, searchable and filterable by family, level, and role, with quantity. Show the encounter's total XP and a difficulty estimate.
 2. **Grid map:** adjustable size; optional uploaded map image under the grid; drag tokens for players and enemies; size-correct footprints (Large 2 squares, Huge 2x2, Massive 3x3); distance measuring in meters; show a selected token's movement range (5 + Speed).
 3. **Initiative and phases:** enemies get 5 + Perception, players' rolls are typed in, ties per the rules, a turn order list with the active combatant highlighted, a phase counter, and Bosses taking two turns per phase.
 4. **Enemy turns:** a button rolls the D20 tactics table, chooses an ability respecting cooldowns and the drop-a-rarity rule, rolls its damage dice from the parsed `attack` data (strikes, dice, sides, flat, AP), and lets the GM pick a target. Damage applies per strike after the target's armor and AP. Humanoids show their combat skill text, and the GM types in damage instead.
@@ -25,7 +25,7 @@ All eight features are built. Tabs: Encounter, Combat (grid map and combat in on
 
 ### Added 2026-10-09 (owner request)
 - **Allies:** friendly NPCs (summons, guides, local help) are added to an encounter's party (`enc.allies`, same shape as `enemies`) and fight as combatants of kind `ally` on the players' side. The NPC picker switches between adding to Enemies or Allies; the combat bar's "Add NPC" adds either mid-fight.
-- **NPC types tab** (was Creatures): the campaign's own NPC types. The built-in list (`data/npc-data.js`) holds game-wide changes.
+- **NPC types tab** (was Creatures): the campaign's own NPC types. The built-in list (`../shared/npc-data.js`) holds game-wide changes.
 - **Party bulk changes:** ticked players can have their level set, raised by one, or be removed together.
 - **Import from the character sheet:** the sheet's backup file (`{ id: character }`) is read with `../shared/character-rules.js`, the same code the sheet uses, so HP (maximum), armor (total), and stats match the sheet. Imported players keep a `sheetId`; importing again updates them.
 - **Humanoid skill attacks:** each humanoid token picks its skill (and path) from the options its stat block allows. Its abilities come from that skill in the Skill Guide up to its tier and the best rarity its tactics can roll; Roll tactics picks among the Standard ones. Strike dice are read from the ability text when possible; otherwise the GM types damage ("Type damage instead" works for any NPC). Custom humanoid NPC types can store a default `skillSetup`.
@@ -44,7 +44,7 @@ All eight features are built. Tabs: Encounter, Combat (grid map and combat in on
 - Data note: some arc attacks are flagged `area` and others are not (the Boss "180 degree arc" attacks and Forge Lord's Flame Thrower are not).
 
 ## Data files
-- `data/npc-data.js` sets `window.PRIMORDIUM_NPCS`: 97 creatures with role, level, tactics, HP, armor, size, stats, XP, attributes, description, and abilities. Each ability has a name, rarity, optional cooldown (phases, or "combat" for once per combat), its text, and where it is a damaging strike an `attack` object (`strikes`, `dice`, `sides`, `flat`, optional `ap`, `area`, `ignoreArmor`). Humanoids have `humanoid: true` and a `combatSkill` text instead of abilities. Bosses have `turnsPerPhase: 2`. Slimes and bonded mimics have no HP (`specialHp` explains their rule).
+- `../shared/npc-data.js` sets `window.PRIMORDIUM_NPCS`: 97 creatures with role, level, tactics, HP, armor, size, stats, XP, attributes, description, and abilities. Each ability has a name, rarity, optional cooldown (phases, or "combat" for once per combat), its text, and where it is a damaging strike an `attack` object (`strikes`, `dice`, `sides`, `flat`, optional `ap`, `area`, `ignoreArmor`). Humanoids have `humanoid: true` and a `combatSkill` text instead of abilities. Bosses have `turnsPerPhase: 2`. Slimes and bonded mimics have no HP (`specialHp` explains their rule).
 - `data/scaling.json` and `docs/scaling.md`: player benchmarks per power step, role and armor-class budgets, and the encounter difficulty formula (section 8 of `scaling.md`, which supersedes the short difficulty note in `rules.md`). Because the app opens without a server, load this data as a `.js` file that sets a global (like the other data files), kept in sync with the JSON.
 - `../shared/primordium-data.js` sets `window.PRIMORDIUM_DATA`: every skill (with each tier's abilities and perks), races, and background traits. Shared with the player app: it is the one copy both apps load, so edit it there only.
 

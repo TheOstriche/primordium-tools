@@ -33,7 +33,7 @@ When you change any file here or `../shared/primordium-data.js`, also raise `VER
 - `index.html`: the app shell
 - `app.js`: screens, rules, and saving
 - `data.js`: sheet layout lists (stats, stacks, rarities, gear slots)
-- `../shared/primordium-data.js` (shared with the GM tool): full Primordium 2.0 data (every skill tier's abilities and perks, races, and traits)
+- `../shared/primordium-data.js` (shared with the GM tool and the Codex): full Primordium 2.0 data (every skill tier's abilities and perks, races, and traits)
 - `style.css`: the look
 - `sw.js`: offline support
 - `manifest.webmanifest` and `icons/`: home screen install

@@ -7,7 +7,7 @@ const S = JSON.parse(fs.readFileSync(path.join(root, 'data', 'scaling.json'), 'u
 const R = require(path.join(root, 'js', 'rules.js'))(S);
 
 const window = {};
-eval(fs.readFileSync(path.join(root, 'data', 'npc-data.js'), 'utf8'));
+eval(fs.readFileSync(path.join(root, '..', 'shared', 'npc-data.js'), 'utf8'));
 const NPCS = window.PRIMORDIUM_NPCS;
 
 let failed = 0;

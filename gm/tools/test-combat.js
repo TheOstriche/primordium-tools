@@ -6,7 +6,7 @@ const root = path.join(__dirname, '..');
 const S = JSON.parse(fs.readFileSync(path.join(root, 'data', 'scaling.json'), 'utf8'));
 const Rules = require(path.join(root, 'js', 'rules.js'))(S);
 const window = {};
-eval(fs.readFileSync(path.join(root, 'data', 'npc-data.js'), 'utf8'));
+eval(fs.readFileSync(path.join(root, '..', 'shared', 'npc-data.js'), 'utf8'));
 const NPCS = window.PRIMORDIUM_NPCS;
 const find = name => NPCS.find(n => n.name === name);
 

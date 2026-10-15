@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "Primordium Codex",
+  "short_name": "Codex",
+  "description": "Primordium 2.0 rules, skills, and creatures at the table.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121019",
+  "theme_color": "#121019",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

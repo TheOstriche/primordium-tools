@@ -1,5 +1,5 @@
 // NPC types tab: build, edit, and delete the campaign's own NPC types (enemies, Bosses,
-// summons, guides, townsfolk). The game's built-in list is data/npc-data.js.
+// summons, guides, townsfolk). The game's built-in list is ../shared/npc-data.js.
 // Suggestions and warnings come from the scaling workbook (data/scaling.json).
 (function () {
   const { h, fill, fmt, toast } = UI;
@@ -77,7 +77,7 @@
         h('h1', 'NPC types'),
         h('p', 'Build the NPCs of your campaign: enemies and Bosses, but also summons, guides, guards, and townsfolk who fight alongside the party. ' +
           'They are saved with your other data, appear in the NPC picker (add them as enemies or allies) and the Reference tab, and are included in backups.'),
-        h('p.muted', 'Start with "New NPC type", or copy an existing one and change it. Changes for the whole game (the built-in list) belong in data/npc-data.js.'));
+        h('p.muted', 'Start with "New NPC type", or copy an existing one and change it. Changes for the whole game (the built-in list) belong in shared/npc-data.js.'));
     }
     const d = draft;
     const sug = Rules.suggestStats(d.role, d.level, armorClass, d.tactics);
