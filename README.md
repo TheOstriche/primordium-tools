@@ -7,7 +7,7 @@ Three apps for Primordium 2.0 that share one copy of the game data.
 | `sheet/` | Player character sheet (phone app, works offline) | https://theostriche.github.io/primordium-tools/sheet/ |
 | `gm/` | GM combat tool (laptop) | https://theostriche.github.io/primordium-tools/gm/ |
 | `codex/` | Rules reference: skills, creatures, rules, dice, and the tactical deck (phone app, works offline) | https://theostriche.github.io/primordium-tools/codex/ |
-| `shared/` | `primordium-data.js` (every skill, race, and trait), `npc-data.js` (every creature), `character-rules.js` (how a sheet's stats, HP, and armor add up), `tactics-deck.js` (the tactical deck and every Tactics mechanic), and `dice.js` (dice rolls), used by the apps | |
+| `shared/` | `primordium-data.js` (every skill, race, and trait), `npc-data.js` (every creature), `character-rules.js` (how a sheet's stats, HP, and armor add up), `tactics-deck.js` (the tactical deck and every Tactics mechanic), `dice.js` (dice rolls), and `fx.js` (impact effects), used by the apps | |
 
 The site's front page (`index.html`) links to all three apps.
 

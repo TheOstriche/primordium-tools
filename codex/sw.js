@@ -1,6 +1,6 @@
 // Offline support: cache the Codex so it opens without a connection. Bump VERSION when you publish changes.
-const VERSION = 'codex-v2';
-const FILES = ['./','index.html','style.css','app.js','codex-data.js','../shared/primordium-data.js','../shared/npc-data.js','../shared/dice.js','../shared/tactics-deck.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
+const VERSION = 'codex-v3';
+const FILES = ['./','index.html','style.css','app.js','codex-data.js','../shared/primordium-data.js','../shared/npc-data.js','../shared/dice.js','../shared/tactics-deck.js','../shared/fx.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
 const FONTS = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
 // Cache each file on its own, so one missing file can never stop the app from installing.
 self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => Promise.all(FILES.map(f => c.add(f).catch(() => null)))).then(() => self.skipWaiting())));

@@ -167,11 +167,19 @@
   }
   function pay(s, b, ids, rar, what) {
     if (s.boost) { rar = up(rar, 1); s.boost = false; s.used.masterPlan = true; }
+    played = {rarity: rar, ids};
     const set = new Set(ids); s.discard.push(...ids); s.hand = s.hand.filter(id => !set.has(id)); s.sel = []; drawTo3(s);
     return `${what} <b>${ids.map(id => name(b, id)).join(' + ')}</b> as ${/^[UEA]/.test(rar) ? 'an' : 'a'} <b>${rar}</b> card. ${riderText(b, ids)}`.trim();
   }
 
+  // act returns what happened, for the apps' effects: {played: {rarity, ids} | null, drawn: [card ids]}.
+  let played = null;
   function act(s, b, action, arg) {
+    const before = new Set(s.hand); played = null;
+    step(s, b, action, arg);
+    return {played, drawn: s.hand.filter(id => !before.has(id))};
+  }
+  function step(s, b, action, arg) {
     const picked = s.sel.map(i => s.hand[i]).filter(Boolean);
     const one = picked.length === 1 ? picked[0] : null;
     switch (action) {
@@ -197,7 +205,7 @@
       case 'plan': { if (!one || s.plan) return; s.plan = one; s.hand = s.hand.filter(id => id !== one); s.sel = []; drawTo3(s);
         s.log = 'Battle plan set aside face down. Drew a replacement. Any friendly character may call it once this combat.'; return; }
       case 'callPlan': { if (!s.plan) return; const id = s.plan, ally = arg === 'ally'; let r = value(b, id);
-        if (ally && b.f.victoryPlan) r = up(r, 1); s.plan = null; s.discard.push(id);
+        if (ally && b.f.victoryPlan) r = up(r, 1); s.plan = null; s.discard.push(id); played = {rarity: r, ids: [id]};
         s.log = `${ally ? 'An ally called' : 'You called'} your battle plan: <b>${name(b, id)}</b> as ${/^[UEA]/.test(r) ? 'an' : 'a'} <b>${r}</b> card.`; return; }
       case 'mark': s.used[arg] = !s.used[arg]; return;
       case 'phase': delete s.used.swap; s.log = 'New phase.'; return;
@@ -220,7 +228,7 @@
   const article = r => /^[UEA]/.test(r) ? 'an' : 'a';
   function cardHTML(b, id, attrs = '', label) {
     const c = b.byId[id], rar = c.rar, lab = label || (wildJoker(b, id) ? `Wild · ${b.f.wildCap}` : rar);
-    return `<button class="pcard r-${rar}" ${attrs} aria-label="${esc(name(b, id))}, ${esc(lab)}"><span class="rk">${c.r === 'JK' ? 'JK' : esc(c.r)}<small>${c.r === 'JK' ? '' : c.s}</small></span><span class="mid">${c.s}</span><span class="lbl">${esc(lab)}</span></button>`;
+    return `<button class="pcard r-${rar}" data-card="${esc(id)}" ${attrs} aria-label="${esc(name(b, id))}, ${esc(lab)}"><span class="rk">${c.r === 'JK' ? 'JK' : esc(c.r)}<small>${c.r === 'JK' ? '' : c.s}</small></span><span class="mid">${c.s}</span><span class="lbl">${esc(lab)}</span></button>`;
   }
   function render(s, b, opts = {}) {
     const picked = s.sel.map(i => s.hand[i]).filter(Boolean), f = b.f;

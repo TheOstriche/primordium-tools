@@ -13,7 +13,17 @@ const RAR = PD.rarities;
 const MATERIALS = [['Oak',0],['Bronze',0],['Iron',0],['Steel',1],['D-Iron',1],['Silv-Steel',1],['D-Steel',2],['Etherian',2],['Lyran Stone',2],['Glacius',3],['Aurausheen',3],['Mag-Glass',4],['Druiniun',4],['Pitch',5],['PriGlass',6],['PriSteel',7]];
 const WEAPONS = ['Sword','Dagger','One Handed Axe','Mace','Spear','Greatsword','Battle Axe','Warhammer','Bow','Crossbow','Staff or Focus','Other'];
 const ARMOR_SLOTS = ['Head / Neck','Chest','Arms','Legs / Feet','Shield'];
-const DK = window.PrimordiumDeck, DICE = window.PrimordiumDice;
+const DK = window.PrimordiumDeck, DICE = window.PrimordiumDice, FX = window.PrimordiumFX;
+// Impact effects (../shared/fx.js). An effect starts where the last tap landed; the overview column shakes.
+FX.configure({shake: '#view'});
+let lastTap = null;
+document.addEventListener('pointerdown', e => { const b = e.target.closest('button'); lastTap = b ? b.getBoundingClientRect() : null; }, true);
+// After HP changes: damage, healing, or going down.
+function hpFx(before) {
+  const after = n(current.hpCur), max = Math.max(1, totals(current).maxhp), el = $('.hero .hpnum') || $('.hero');
+  if (after < before) return before > 0 && after <= 0 ? FX.hp('down') : FX.hp('damage', el, (before - after) / max);
+  if (after > before) FX.hp('heal', el, (after - before) / max);
+}
 let db = load(); let current = null; const tray = {pool: [], mod: 0, rolls: []}; let tab = 'overview'; let editList = false; const openGroups = new Set();
 const DAMAGING = ['Bleed','Flame','Poison','Acid'];
 const has = (c, perk) => granted(c).some(i => i.name === perk);
@@ -57,7 +67,8 @@ const deckState = (c, b = deckBuild(c)) => (c.deck = DK.fit(c.deck, b));
 // ---------- dice tray (kept until the page closes; results also show as a toast) ----------
 function logRoll(label, r, extra = '') {
   tray.rolls.unshift({label, total: r.total, parts: r.parts.join(' '), extra}); tray.rolls.length = Math.min(tray.rolls.length, 5);
-  toast([`${label}: ${r.total}`, r.parts.join(' ') + (extra ? ' · ' + extra : '')]); charView(current.id);
+  toast([`${label}: ${r.total}`, r.parts.join(' ') + (extra ? ' · ' + extra : '')]); const from = lastTap; charView(current.id);
+  const j = FX.judge(r); FX.tumble($('.rolls output'), r.total, r.dice.reduce((a, d) => a + d.f, 0) || 20, j && j.kind); FX.roll(r, from, {label});
 }
 // ---------- totals ----------
 function totals(c) {
@@ -119,7 +130,8 @@ function recover(id) {
   else lines.push(roll === 1 ? 'A 1 never recovers.' : 'Failed.');
   if (a.count > 0) lines.push(`Next roll needs ${a.need}+`); else lines.push(`${a.type} cleared`);
   if (!a.count) current.aug = current.aug.filter(x => x !== a);
-  toast(lines); rerender();
+  const from = lastTap; toast(lines); rerender();
+  if (ok) FX.sparkle(from, '#6fd39a', 14 + removed * 3); else FX.fizzle(from);
 }
 const capStack = a => { if (DAMAGING.includes(a.type) && has(current, 'Unyielding Flesh') && n(a.count) > 5) { a.count = 5; toast(['Unyielding Flesh', `${a.type} can not exceed 5 stacks`]); } };
 // ---------- list ----------
@@ -256,7 +268,8 @@ function stepSkill(k, kind, by) {
   const dchg = RAR.filter(r => deck1[r] !== deck0[r]).map(r => `${r} ${deck0[r]} → ${deck1[r]}`);
   if (dchg.length) { lines.push(`Deck: ${dchg.join(', ')}`); if (by > 0 && deckBuild(current).steps.length) lines.push('Choose which cards are promoted under Card assignment on the Sheet tab'); }
   if (T.earned - T.spent < 0) lines.push(`Over budget by ${T.spent - T.earned} skill point${T.spent - T.earned > 1 ? 's' : ''}`);
-  toast(lines.length > 1 ? lines : [head, 'No new abilities or perks at this tier.']); rerender();
+  const from = lastTap; toast(lines.length > 1 ? lines : [head, 'No new abilities or perks at this tier.']); rerender();
+  if (by > 0) FX.sparkle(from, '#eab14c', 22);
 }
 function applyRace(r) {
   const race = D.races[r]; if (!race) return;
@@ -310,8 +323,11 @@ document.addEventListener('input', e => {
   if (p.endsWith('.path')) { const k = p.split('.')[1]; if (e.target.value) toast([`${k}: ${e.target.value} chosen`, 'Raise its path tier to unlock the path\'s abilities.']); return charView(current.id); }
   if (['level','hpBase','hpOther','armorOther','trin.dmg','trin.a','trin.b','hpCur','suit'].includes(p) || p.startsWith('trin.')) { if (e.target.tagName === 'SELECT') charView(current.id); }
 });
+let hpTyped = null;
+document.addEventListener('focusin', e => { if (e.target.dataset && e.target.dataset.p === 'hpCur') hpTyped = n(current && current.hpCur); });
 document.addEventListener('change', e => {
   const id = e.target.id;
+  if (e.target.dataset.p === 'hpCur' && hpTyped != null) { const before = hpTyped; hpTyped = null; setTimeout(() => hpFx(before)); }
   if (id === 'traitPick' && e.target.value) { const t = D.traits.find(x => x.name === e.target.value); current.traits.push({...t}); toast([`Trait added: ${t.name}`, t.effect, ...(traitFx(t).length ? ['Applied to your stats'] : [])]); return rerender(); }
   if (id === 'abilityPick') { current.abilityPick = e.target.value; return rerender(); }
   if (e.target.dataset.promo) { (current.deckPicks ??= {})[e.target.dataset.promo] = e.target.value; return rerender(); }
@@ -334,7 +350,13 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
-  if (d.deck) { DK.act(deckState(current), deckBuild(current), d.deck, d.i); return rerender(); }
+  if (d.deck) {
+    const from = FX.rectOf(document.querySelectorAll('.hand .pcard[aria-pressed="true"]')) || lastTap;
+    const ev = DK.act(deckState(current), deckBuild(current), d.deck, d.i); rerender();
+    FX.deal(ev.drawn.map(id => document.querySelector(`.hand [data-card="${CSS.escape(id)}"]`)));
+    if (ev.played) FX.card(ev.played.rarity, from);
+    return;
+  }
   if (d.addie) { tray.pool.push(Number(d.addie)); return charView(current.id); }
   if (d.trmod) { tray.mod += Number(d.trmod); return charView(current.id); }
   if (d.qroll) { const L = totals(current).live;
@@ -349,14 +371,15 @@ document.addEventListener('click', e => {
   if (d.tab) return charView(current.id, d.tab);
   if (d.sk) return stepSkill(d.sk, d.kind, Number(d.by));
   if (d.s) { set(current, d.s, n(get(current, d.s)) + Number(d.by)); return rerender(); }
-  if (d.hp) { current.hpCur = n(current.hpCur) + Number(d.hp); return rerender(); }
+  if (d.hp) { const before = n(current.hpCur); current.hpCur = before + Number(d.hp); rerender(); return hpFx(before); }
   if (d.tmp) { let r = current.aug.find(a => a.cat === 'stat' && a.stat === d.tmp && a.source === 'Quick adjust');
     if (!r) { r = {id: uid(), cat: 'stat', stat: d.tmp, amount: 0, source: 'Quick adjust'}; current.aug.push(r); }
     r.amount = n(r.amount) + Number(d.by); r.type = `${STATN[d.tmp]} ${r.amount > 0 ? '+' : ''}${r.amount}`; if (!r.amount) current.aug = current.aug.filter(a => a !== r); return rerender(); }
   if (d.recover) return recover(d.recover);
   if (d.aug) { const a = current.aug.find(x => x.id === d.aug); a.count = Math.max(0, n(a.count) + Number(d.by)); if (a.cat === 'stack' && Number(d.by) > 0) { a.need = startNeed(current); capStack(a); } if (!a.count) current.aug = current.aug.filter(x => x !== a); return rerender(); }
   if (d.rmaug) { current.aug = current.aug.filter(x => x.id !== d.rmaug); return rerender(); }
-  if (d.death) { current.death = current.death >= Number(d.death) ? Number(d.death) - 1 : Number(d.death); return rerender(); }
+  if (d.death) { const was = current.death; current.death = current.death >= Number(d.death) ? Number(d.death) - 1 : Number(d.death); rerender();
+    if (current.death > was) FX.beat($(`[data-death="${current.death}"]`)); return; }
   if (d.del) { const [k, i] = d.del.split('.'); current[k].splice(Number(i), 1); return rerender(); }
   if (d.equip) { const it = current.items.find(i => i.id === d.equip); if (it.equipped) { it.equipped = false; toast([`Unequipped ${it.name}`, 'Moved to your pack']); return rerender(); } return itemSheet(it.id); }
   if (d.edititem) { const it = current.items.find(i => i.id === d.edititem); if (it.equipped) return itemSheet(it.id);
@@ -365,17 +388,17 @@ document.addEventListener('click', e => {
   if (d.augcat) return d.augcat === 'stat' ? augStep(2, {cat: 'stat'}) : augStep(2, {cat: d.augcat});
   if (d.augtype) return d.augtype === 'Weakened' ? augStep(3) : addAug({cat: d.cat, type: d.augtype, count: 1});
   switch (d.act) {
-    case 'mode': current.mode = current.mode === 'combat' ? 'standard' : 'combat'; return rerender();
+    case 'mode': current.mode = current.mode === 'combat' ? 'standard' : 'combat'; rerender(); return FX.mood(current.mode === 'combat' ? 'combat' : 'calm');
     case 'addaug': return augStep(1);
     case 'closesheet': return sheet.close();
     case 'trroll': { const ex = DICE.poolExpr(tray.pool, tray.mod); return ex ? logRoll('Roll', DICE.roll(ex)) : undefined; }
     case 'trclear': tray.pool = []; tray.mod = 0; return charView(current.id);
     case 'addother': current.abilities.push({name: '', skill: ''}); return rerender();
-    case 'endcombat': current.aug = current.aug.filter(a => a.cat === 'stack'); current.death = 0; DK.act(deckState(current), deckBuild(current), 'combat'); toast(['Combat ended', 'Resources, conditions, and temporary stat effects cleared. Stacks remain until treated.', 'Once-per-combat card abilities are ready again.']); return rerender();
+    case 'endcombat': FX.mood('calm'); current.aug = current.aug.filter(a => a.cat === 'stack'); current.death = 0; DK.act(deckState(current), deckBuild(current), 'combat'); toast(['Combat ended', 'Resources, conditions, and temporary stat effects cleared. Stacks remain until treated.', 'Once-per-combat card abilities are ready again.']); return rerender();
     case 'breather': { const T = totals(current); current.hpCur = Math.min(T.maxhp, n(current.hpCur) + Math.floor(T.maxhp / 4)); current.aug = current.aug.filter(a => a.cat !== 'stack'); current.breather = true;
       const b = deckBuild(current), ds = deckState(current, b); DK.act(ds, b, 'breather');
-      toast(['Breather taken', `+${Math.floor(T.maxhp / 4)} HP, stacks cleared.`, ds.pick ? 'Choose the cards to keep under Cards.' : 'The top 8 cards of your discard pile went back into your deck.']); return rerender(); }
-    case 'rest': current.hpCur = totals(current).maxhp; current.hpTemp = 0; current.aug = []; current.death = 0; current.breather = false; current.mode = 'standard'; DK.act(deckState(current), deckBuild(current), 'rest'); toast(['Full rest taken', 'HP restored, effects cleared, deck reshuffled, breather ready.']); return rerender();
+      toast(['Breather taken', `+${Math.floor(T.maxhp / 4)} HP, stacks cleared.`, ds.pick ? 'Choose the cards to keep under Cards.' : 'The top 8 cards of your discard pile went back into your deck.']); rerender(); return FX.mood('breather'); }
+    case 'rest': current.hpCur = totals(current).maxhp; current.hpTemp = 0; current.aug = []; current.death = 0; current.breather = false; current.mode = 'standard'; DK.act(deckState(current), deckBuild(current), 'rest'); toast(['Full rest taken', 'HP restored, effects cleared, deck reshuffled, breather ready.']); rerender(); return FX.mood('rest');
     case 'delete': if (confirm(`Delete ${current.name || 'this character'}? This can not be undone unless you have a backup.`)) { delete db[current.id]; saveNow(); listView(); } return;
   }
 });
@@ -384,7 +407,14 @@ document.addEventListener('submit', e => {
   Object.assign(it, {name: fd.name || it.name, desc: fd.desc, qty: Math.max(1, n(fd.qty))}); sheet.close(); rerender();
 });
 $('#backBtn').onclick = () => { saveNow(); listView(); };
-$('#menuBtn').onclick = () => $('#menu').showModal();
+function fxMenu() {
+  const c = FX.settings();
+  $('#fxPrefs').innerHTML = [['visual', 'Impact effects'], ['sound', 'Sound'], ['haptics', 'Vibration']].map(([k, l]) =>
+    `<button class="tog ${c[k] ? 'on' : ''}" data-fx="${k}" aria-pressed="${c[k]}">${l}: ${c[k] ? 'on' : 'off'}</button>`).join('');
+}
+$('#menuBtn').onclick = () => { fxMenu(); $('#menu').showModal(); };
+$('#fxPrefs').onclick = e => { const b = e.target.closest('[data-fx]'); if (!b) return; const k = b.dataset.fx, on = !FX.settings()[k];
+  FX.settings({[k]: on}); fxMenu(); if (on && k !== 'haptics') FX.card('Epic', b); };
 $('#closeMenu').onclick = () => $('#menu').close();
 $('#exportBtn').onclick = () => { const blob = new Blob([JSON.stringify(db, null, 1)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `primordium-characters-${new Date().toISOString().slice(0, 10)}.json`; a.click(); };
 $('#importFile').onchange = async e => { try { const data = JSON.parse(await e.target.files[0].text()); Object.assign(db, data); saveNow(); $('#menu').close(); listView(); toast([`Imported ${Object.keys(data).length} characters`]); } catch { toast(['That file is not a Primordium backup', 'Choose a file made with Export all characters.']); } };

@@ -35,6 +35,7 @@ When you change any file here or `../shared/primordium-data.js`, also raise `VER
 - `data.js`: sheet layout lists (stats, stacks, rarities, gear slots)
 - `../shared/primordium-data.js` (shared with the GM tool and the Codex): full Primordium 2.0 data (every skill tier's abilities and perks, races, and traits)
 - `../shared/tactics-deck.js` and `../shared/dice.js` (shared with the Codex): the tactical deck and dice rolls
+- `../shared/fx.js` (shared with the Codex and the GM tool): impact effects for rolls, cards, HP, combat, and rests. Turn them, sound, or vibration on and off in **⋯ → Effects**.
 - `style.css`: the look
 - `sw.js`: offline support
 - `manifest.webmanifest` and `icons/`: home screen install

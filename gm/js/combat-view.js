@@ -36,10 +36,19 @@
   }
 
   // Run a change, save, and redraw.
+  // Impact effects (../shared/fx.js): a defeated enemy or a downed player gets its moment after the redraw.
+  const FX = window.PrimordiumFX || null;
   function act(fn) {
+    const cb = combat(), was = cb ? new Map(cb.combatants.map(c => [c.id, { dead: !!c.dead, down: Combat.isDowned(c) }])) : new Map();
     fn();
     Store.changed();
     refresh();
+    if (!FX || !cb) return;
+    for (const c of cb.combatants) {
+      const w = was.get(c.id); if (!w) continue;
+      if (c.dead && !w.dead) FX.banner(c.kind === 'player' ? c.name + ' falls' : 'Defeated', c.kind === 'player' ? '#e0604f' : '#eab14c', .9);
+      else if (Combat.isDowned(c) && !w.down) FX.hp('down');
+    }
   }
 
   // ---------- Top level ----------
@@ -549,6 +558,16 @@
         h('input.tiny-num', { type: 'number', min: 0, value: s.weaponTier, onchange: e => change(() => { s.weaponTier = Math.max(0, parseInt(e.target.value, 10) || 0); }) })));
   }
 
+  // Each strike that rolled every die at its highest face (a crit) or every die at 1 (a miss) gets its effect.
+  function strikeFx(p) {
+    if (!FX || !p.roll) return;
+    const els = document.querySelectorAll('.roll-line .strike'); let loud = false;
+    p.roll.strikes.forEach((s, i) => {
+      const kind = FX.roll({ dice: s.dice.map(r => ({ f: p.ability.attack.sides, r })) }, els[i], { quiet: loud });
+      if (kind) { loud = true; if (els[i]) els[i].classList.add(kind === 'crit' ? 'pfx-crit' : 'pfx-fumble', 'pfx-pop'); }
+    });
+  }
+
   function attackSection(cb, c, npc, isActive) {
     if (cb.phase === 0 || c.dead) return null;
     const p = planFor(c);
@@ -558,10 +577,12 @@
     const parts = [h('div.card-head', h('h3', 'Attack'),
       abilities.length ? h('button' + (isActive && !p.ability && p.manual == null ? '.primary' : '') + '.small', {
         title: 'Roll a D20 on the tactics table to pick an ability',
-        onclick: () => {
+        onclick: e => {
+          const from = e.currentTarget.getBoundingClientRect();
           const ch = Combat.chooseAbility(cb, c, npc, null, abilities);
           Object.assign(p, { ability: ch.ability, tactic: ch, roll: null, manual: null, targets: {} });
           refresh();
+          if (FX) FX.card(ch.ability ? ch.ability.rarity : ch.rolled, from);
         }
       }, 'Roll tactics') : null)];
 
@@ -643,7 +664,7 @@
         parts.push(h('div.row',
           h('button.primary', {
             disabled: disabled || !chosen.length,
-            onclick: () => { p.roll = Combat.rollAttack(p.ability.attack); refresh(); }
+            onclick: () => { p.roll = Combat.rollAttack(p.ability.attack); refresh(); strikeFx(p); }
           }, chosen.length ? 'Roll ' + p.ability.name : 'Choose a target to roll'),
           h('button.ghost', { onclick: () => { plan = null; refresh(); } }, 'Cancel')));
         return h('div.section.attack.live', parts);
@@ -652,7 +673,7 @@
         p.roll.strikes.map(s => h('span.strike' + (s.failed ? '.miss' : ''), { title: 'Dice: ' + s.dice.join(' + ') + (s.flat ? ' + ' + s.flat : '') },
           String(s.value))),
         h('span.muted.small', p.roll.ignoreArmor ? 'ignores armor' : p.roll.ap ? p.roll.ap + ' AP' : ''),
-        h('button.ghost.small', { onclick: () => { p.roll = Combat.rollAttack(p.ability.attack); refresh(); } }, 'Reroll')));
+        h('button.ghost.small', { onclick: () => { p.roll = Combat.rollAttack(p.ability.attack); refresh(); strikeFx(p); } }, 'Reroll')));
     }
 
     // Each target's defense and the damage it takes.

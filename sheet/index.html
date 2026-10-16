@@ -25,6 +25,9 @@
   <p>Characters are saved on this device. Export a backup to move them to another phone or keep them safe.</p>
   <button id="exportBtn" class="btn">Export all characters</button>
   <label class="btn ghost">Import a backup<input id="importFile" type="file" accept="application/json" hidden></label>
+  <h2 style="margin-top:18px">Effects</h2>
+  <p>Crits, card plays from Rare to Mythic, and other flourishes. Shared with the Codex on this phone.</p>
+  <div id="fxPrefs" class="chips"></div>
   <button id="closeMenu" class="btn ghost">Close</button>
 </dialog>
 <dialog id="sheet" class="bottom" aria-label="Choose"></dialog>
@@ -33,6 +36,7 @@
 <script src="../shared/primordium-data.js"></script>
 <script src="../shared/dice.js"></script>
 <script src="../shared/tactics-deck.js"></script>
+<script src="../shared/fx.js"></script>
 <script src="../shared/character-rules.js"></script>
 <script src="app.js"></script>
 </body>

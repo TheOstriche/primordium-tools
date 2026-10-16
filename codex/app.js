@@ -57,11 +57,18 @@ function linkDice(text){
   return esc(text).replace(DICE_RE, m => `<button class="die" data-roll="${m.replace(/\s/g,"")}">${m}</button>`);
 }
 let toastTimer;
-function showRoll(label, res, extra=""){
-  const allNat = res.dice.length===1 ? res.dice[0] : null;
-  const cls = allNat && allNat.r===allNat.f && allNat.f>=10 ? "crit" : allNat && allNat.r===1 ? "fumble" : "";
+/* ---------- impact effects (../shared/fx.js): where the last tap landed is where an effect starts ---------- */
+const FX = window.PrimordiumFX;
+FX.configure({shake: "#app"});
+let lastTap = null;
+document.addEventListener("pointerdown", e => { const b = e.target.closest("button"); lastTap = b ? b.getBoundingClientRect() : null; }, true);
+// quiet: a crit or fumble gets its sparks but no banner (tactics rolls show the rarity instead).
+function showRoll(label, res, extra="", opts={}){
+  const j = FX.judge(res);
+  const cls = j ? j.kind : "";
   $("#t-total").className = "total " + cls;
-  $("#t-total").textContent = res.total;
+  FX.tumble($("#t-total"), res.total, res.dice.reduce((a,d)=>a+d.f,0) || 20);
+  FX.roll(res, lastTap || $("#toast"), {quiet: opts.quiet, label});
   $("#t-what").innerHTML = `<b>${esc(label)}</b>${esc(res.parts.join(" "))}${extra ? " · " + esc(extra) : ""}`;
   $("#toast").classList.add("on");
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>$("#toast").classList.remove("on"), 4200);
@@ -398,8 +405,16 @@ V.dice = () => {
   <label class="inline" style="margin-top:10px" for="qmod">Modifier for table rolls <input id="qmod" type="number" value="${store.get("qmod",0)}" style="width:70px"></label>
 
   <h3 class="sec">History</h3>
-  <div class="hist">${state.history.length?`<ol>${state.history.slice(0,12).map(h=>`<li><span><b>${esc(h.label)}</b><br><span class="muted">${esc(h.parts)}${h.extra?" · "+esc(h.extra):""}</span></span><span class="tot">${h.total}</span></li>`).join("")}</ol>`:`<p class="muted">Rolls from anywhere in the Codex land here.</p>`}</div>`;
+  <div class="hist">${state.history.length?`<ol>${state.history.slice(0,12).map(h=>`<li><span><b>${esc(h.label)}</b><br><span class="muted">${esc(h.parts)}${h.extra?" · "+esc(h.extra):""}</span></span><span class="tot">${h.total}</span></li>`).join("")}</ol>`:`<p class="muted">Rolls from anywhere in the Codex land here.</p>`}</div>
+  ${fxSettingsHTML()}`;
 };
+// Effects settings, shared with the sheet and the GM tool (same site, same storage).
+function fxSettingsHTML(){
+  const c = FX.settings();
+  const row = (k, label) => `<div class="fxrow"><span>${label}</span><div class="seg" role="group" aria-label="${label}">${[[true,"On"],[false,"Off"]].map(([v,l])=>`<button aria-pressed="${c[k]===v}" data-fx="${k}" data-v="${v}">${l}</button>`).join("")}</div></div>`;
+  return `<h3 class="sec">Effects</h3><div class="panel" style="margin-top:0">${row("visual","Impact effects")}${row("sound","Sound")}${row("haptics","Vibration")}
+    <p class="muted ui" style="font-size:.8rem;margin:8px 0 0">Crits, card plays from Rare to Mythic, and other flourishes. Shared with the character sheet on this phone.</p></div>`;
+}
 function poolExpr(){
   const faces = [20,12,10,8,6,4]; const parts = [];
   faces.forEach(f=>{ const c = state.pool.filter(x=>x===f).length; if (c) parts.push((c>1?c:"")+"D"+f); });
@@ -437,25 +452,37 @@ $("#view").addEventListener("click", e => {
   if (t.closest("#tacGo")){
     const row = store.get("tacRow","Good");
     const res = rollExpr("D20"), r = tacticsRarity(row, res.total);
-    showRoll(`Tactics · ${row}`, res, r);
+    showRoll(`Tactics · ${row}`, res, r, {quiet:true});
     $("#ladder").outerHTML = ladderHTML(row, r).replace(/<div class="ladder-names">[\s\S]*$/, "");
     $("#tacOut").innerHTML = `<div class="verdict"><span class="big">${res.total}</span>${chip(r)}<p class="muted ui" style="margin:6px 0 0;font-size:.85rem">If nothing at ${r} is ready, drop one rarity at a time.</p></div>`;
+    FX.tumble($("#tacOut .big"), res.total, 20, FX.judge(res)?.kind);
+    FX.card(r, $("#ladder .c.hit") || $("#ladder"));
     return;
   }
-  const dk = t.closest("[data-deck]"); if (dk){ DK.act(DECK, deckBuild(), dk.dataset.deck, dk.dataset.i); store.set("deck2", DECK); return render(); }
+  const fxb = t.closest("[data-fx]"); if (fxb){ FX.settings({[fxb.dataset.fx]: fxb.dataset.v === "true"}); render(); if (fxb.dataset.fx==="visual" && fxb.dataset.v==="true") FX.card("Epic", fxb); if (fxb.dataset.fx==="sound" && fxb.dataset.v==="true") FX.card("Rare", fxb); return; }
+  const dk = t.closest("[data-deck]"); if (dk){
+    const from = FX.rectOf(document.querySelectorAll(".hand .pcard[aria-pressed=true]")) || lastTap;
+    const ev = DK.act(DECK, deckBuild(), dk.dataset.deck, dk.dataset.i); store.set("deck2", DECK); render();
+    FX.deal(ev.drawn.map(id => document.querySelector(`.hand [data-card="${CSS.escape(id)}"]`)));
+    if (ev.played) FX.card(ev.played.rarity, from);
+    return;
+  }
   const dv = t.closest("[data-dview]"); if (dv){ state.diceView = dv.dataset.dview; store.set("diceView", state.diceView); return render(); }
   const tac = t.closest("[data-tactic]");
   if (tac){
     const n = DATA.npcs.find(x=>x.id===tac.dataset.tactic);
-    const turns = n.turns; let out = "";
+    const turns = n.turns; let out = "", top = 0; const totals = [];
     for (let i=0;i<turns;i++){
       const res = rollExpr("D20"), r = tacticsRarity(n.tactics, res.total), {a, dropped} = resolveAbility(n, r);
-      if (i===0) showRoll(`${n.name} · tactics`, res, a ? a.name : r);
+      if (i===0) showRoll(`${n.name} · tactics`, res, a ? a.name : r, {quiet:true});
+      top = Math.max(top, RAR.indexOf(a ? a.rarity : r)); totals.push(res);
       out += `<div class="verdict" data-ctx="${esc(n.name+(a?" · "+a.name:""))}"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px">${turns>1?`<span class="tag">Turn ${i+1}</span>`:""}<span class="big">${res.total}</span>${chip(r)}</div>
         ${a ? `<p style="margin:8px 0 0"><b>${esc(a.name)}</b>${dropped?` <span class="muted ui" style="font-size:.8rem">(dropped to ${a.rarity})</span>`:""}<br>${linkDice(a.text)}</p>`
             : `<p class="muted" style="margin:8px 0 0">Humanoid: use its combat skill at ${r} or below.</p>`}</div>`;
     }
-    $("#npcOut").innerHTML = out; return;
+    $("#npcOut").innerHTML = out;
+    document.querySelectorAll("#npcOut .big").forEach((el,i) => FX.tumble(el, totals[i].total, 20, FX.judge(totals[i])?.kind));
+    FX.card(RAR[top], $("#npcOut")); return;
   }
   const add = t.closest("[data-add]"); if (add){ state.pool.push(+add.dataset.add); return render(); }
   const md = t.closest("[data-mod]"); if (md){ state.mod += +md.dataset.mod; return render(); }

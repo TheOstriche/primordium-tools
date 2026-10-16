@@ -252,3 +252,6 @@ nav.tabs button[aria-current="page"]{color:var(--glow)}
 
 @media (max-width:380px){.ladder .c i{font-size:.54rem}.ladder-names span{font-size:.48rem}.stats .v{font-size:1rem}.pcard .mid{font-size:1.7rem}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+.fxrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px}
+.fxrow>span{font:500 .92rem var(--f-ui)}
+.fxrow .seg{margin:0}

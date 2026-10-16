@@ -77,5 +77,11 @@ K.act(s, c4, 'callPlan', 'ally');
 check(all(s) === c4.cards.map(c => c.id).sort().join(), 'battle plan and Lead by Example keep every card accounted for');
 check(/as an? <b>/.test(s.log), 'calling the plan reports its rarity');
 
+// act reports what happened, for the apps' impact effects.
+s = K.newState(b0); const firstCard = s.hand[0]; K.act(s, b0, 'sel', 0); let ev = K.act(s, b0, 'play');
+check(ev.played && ev.played.rarity === b0.byId[firstCard].rar && ev.played.ids[0] === firstCard && ev.drawn.length === 1, 'a play reports its rarity and the card drawn');
+K.act(s, b0, 'sel', 0); K.act(s, b0, 'sel', 1); ev = K.act(s, b0, 'reeval');
+check(!ev.played && ev.drawn.length === 2, 'Re-Evaluate reports two cards drawn and nothing played');
+
 console.log(fails ? `\n${fails} check(s) failed` : '\nAll checks passed');
 process.exit(fails ? 1 : 0);
