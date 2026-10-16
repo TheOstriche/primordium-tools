@@ -4,7 +4,9 @@
 // No screen code here, so tools/test-combat.js can check it.
 // Sources: docs/rules.md (Damage), and the humanoid "Combat skill" text in npc-data.js.
 (function (root) {
-  const RARITIES = ['Basic', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'];
+  // Shared game constants (rarities, the tactics table, stacks): ../shared/core.js.
+  const Core = root.PrimordiumCore || require('../../shared/core.js');
+  const RARITIES = Core.RARITIES;
   const COUNTS = { once: 1, twice: 2, thrice: 3, one: 1, a: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
   // Short names the stat blocks use for skills.
   const ALIASES = { Fire: 'Fire Magic', Frost: 'Frost Magic', Shock: 'Shock Magic', Restoration: 'Restoration Magic',
@@ -71,10 +73,7 @@
 
     const pathsOf = name => Object.keys((byName[name] || {}).paths || {});
 
-    function maxRarityIndex(tactics) {
-      const row = (Rules.TACTICS_TABLE[tactics] || Rules.TACTICS_TABLE.Basic).map(r => r[0]);
-      return Math.max(...row.map(r => RARITIES.indexOf(r)));
-    }
+    const maxRarityIndex = tactics => Math.max(...Core.reachableRarities(tactics).map(r => RARITIES.indexOf(r)));
 
     // The abilities a humanoid can use: its skill's abilities up to its tier, of rarity up to
     // the best its tactics can roll. On a path, the path's basic attack replaces Tier 0's.

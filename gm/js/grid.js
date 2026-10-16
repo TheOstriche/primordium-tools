@@ -167,6 +167,9 @@
 
     // ---- Movement range and ruler ----
 
+    // Colors come from the shared theme (../shared/theme.css), so the overlay suits light and dark.
+    const token = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
     function drawOverlay() {
       const ctx = canvas.getContext('2d');
       const cs = cellSize();
@@ -175,7 +178,8 @@
       if (c && c.x != null && !c.dead && !Combat.isDowned(c)) {
         const [fw, fh] = Combat.footprint(c);
         const move = Combat.movement(c);
-        ctx.fillStyle = c.kind === 'player' ? 'rgba(110,160,220,0.18)' : 'rgba(212,102,79,0.16)';
+        ctx.fillStyle = token('--side-' + c.kind);   // player, ally, or enemy
+        ctx.globalAlpha = 0.18;
         for (let y = Math.max(0, c.y - move); y < Math.min(o.map.rows, c.y + fh + move); y++) {
           for (let x = Math.max(0, c.x - move); x < Math.min(o.map.cols, c.x + fw + move); x++) {
             const dx = Math.max(0, c.x - x, x - (c.x + fw - 1));
@@ -184,11 +188,12 @@
             if (d > 0 && d <= move) ctx.fillRect(x * cs + 1, y * cs + 1, cs - 2, cs - 2);
           }
         }
+        ctx.globalAlpha = 1;
       }
       if (rulerLine) {
         const { ax, ay, bx, by } = rulerLine;
         const mid = v => v * cs + cs / 2;
-        ctx.strokeStyle = '#e0b860';
+        ctx.strokeStyle = ctx.fillStyle = token('--gilt');
         ctx.lineWidth = 3;
         ctx.setLineDash([8, 6]);
         ctx.beginPath();
@@ -196,7 +201,6 @@
         ctx.lineTo(mid(bx), mid(by));
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = '#e0b860';
         [[ax, ay], [bx, by]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(mid(x), mid(y), 5, 0, Math.PI * 2); ctx.fill(); });
         showTip(Combat.distance(ax, ay, bx, by) + 'M', bx, by, false);
       } else if (!drag) {

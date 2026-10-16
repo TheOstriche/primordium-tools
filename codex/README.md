@@ -12,6 +12,7 @@ Live at `https://theostriche.github.io/primordium-tools/codex/`.
 | `../shared/npc-data.js` | All creatures. Shared with the GM tool. |
 | `../shared/tactics-deck.js`, `../shared/dice.js` | The tactical deck (cards, promotions, and every Tactics mechanic) and dice rolls. Shared with the sheet. |
 | `../shared/fx.js` | Impact effects: card plays from Rare to Mythic, crits and natural 1s, tactics rolls. Settings are at the bottom of the Dice tab. |
+| `../shared/core.js` | Rarities, the D20 tactics table, cooldowns, roles and XP: shared with the other apps. |
 | `codex-data.js` | What only the Codex shows: rules sections, tables (tactics, deck, wealth, materials, consumables, enchantments, sizes, XP roles), race lore (country, deity, appearance), skill summaries and A/S/K stat, creature family groups and descriptions. Hand-transcribed from Game Guide 2.0 and NPC Guide 2.0. |
 
 `app.js` reshapes the shared data for the Codex when the page loads. There is no build step: edit a data file, refresh, done.
@@ -20,7 +21,7 @@ Creature families that are not yet in `codex-data.js` → `creatureFamilies` (Bo
 
 ## Publishing changes
 
-When you change any file here or anything in `../shared/` that the Codex loads, raise `VERSION` in `sw.js` (for example `codex-v1` to `codex-v2`) so installed phones fetch the new copy.
+When you change any file here or anything in `../shared/` that the Codex loads, raise the version in `sw.js` (for example `codex-v4` to `codex-v5`) so installed phones fetch the new copy, and keep its file list matching what `index.html` loads.
 
 ## Checking a new guide export
 
@@ -34,7 +35,12 @@ python -m unittest discover -s codex/tests
 
 ## Files
 
-- `index.html`, `style.css`, `app.js`: the app (design approved; colors are tokens at the top of `style.css`)
+- `index.html`: the page; it loads the shared files, then the Codex's own scripts in this order:
+  - `js/data.js`: the shared data reshaped for the Codex, and the search index
+  - `js/ui.js`: helpers (saving, rarity chips, tappable dice in text, the roll toast)
+  - `js/views.js`: every screen, one function each
+  - `js/app.js`: what is on screen, moving between screens, and every tap (the `TAPS` table)
+- `style.css`: the Codex's layout. Colors, fonts, buttons, chips, tables, the dice tray, and the deck come from `../shared/theme.css` (the house style all three apps use).
 - `codex-data.js`: Codex-only rules data (see above)
 - `sw.js`: offline support; `manifest.webmanifest` and `icons/`: home screen install
 - `tools/parse_guides.py`, `tests/`: guide parser and its tests

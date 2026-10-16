@@ -3,12 +3,15 @@
 // No screen code here, so tools/test-combat.js can check it with fixed dice.
 // Sources: docs/rules.md (including the GM rulings section).
 (function (root) {
-  const STACK_TYPES = ['Bleed', 'Flame', 'Poison', 'Acid', 'Frozen', 'Paralysis', 'Calm', 'Anger', 'Fear'];
-  const DAMAGING_STACKS = ['Bleed', 'Flame', 'Poison', 'Acid'];
-  const CONDITIONS = ['Disoriented', 'Calmed', 'Enraged', 'Terrified', 'Entrapped'];
+  // Shared game constants (rarities, the tactics table, stacks): ../shared/core.js.
+  const Core = root.PrimordiumCore || require('../../shared/core.js');
+  const STACK_TYPES = Core.STACKS;
+  const DAMAGING_STACKS = Core.DAMAGING_STACKS;
+  // Conditions the GM can mark on a creature. Calmed, Enraged, and Terrified follow from Calm, Anger, and Fear stacks.
+  const CONDITIONS = ['Disoriented', 'Calmed', 'Enraged', 'Terrified'];
   // Squares a creature covers: [wide, tall]. Tiny and Small share a square.
   const FOOTPRINT = { Tiny: [1, 1], Small: [1, 1], Average: [1, 1], Large: [2, 1], Huge: [2, 2], Massive: [3, 3] };
-  const DEFAULT_COOLDOWN = { Rare: 1, Epic: 2, Legendary: 3, Mythic: 'combat' };
+  const DEFAULT_COOLDOWN = Core.COOLDOWNS;
   const DEATH_CLOCK = 3;
 
   function make(Rules, findNpc, random) {
@@ -178,7 +181,7 @@
           hurt(combat, c, dmg, false);
           lines.push(c.name + ' takes ' + dmg + ' ' + type + ' damage (' + s.n + 'D4: ' + dice.join(', ') + ').');
         }
-        for (const s of Object.values(c.stacks)) s.target = Math.max(2, s.target - 1);
+        for (const s of Object.values(c.stacks)) s.target = Math.max(Core.RECOVERY_FLOOR, s.target - 1);
         c.effects = c.effects.filter(e => {
           if (e.phases == null) return true;
           e.phases--;
@@ -270,9 +273,9 @@
     // ---------- Stacks ----------
 
     function addStacks(c, type, n) {
-      const s = c.stacks[type] || { n: 0, target: 4 };
+      const s = c.stacks[type] || { n: 0, target: Core.RECOVERY_START };
       s.n = Math.max(0, s.n + n);
-      if (n > 0) s.target = 4;   // a new stack resets the recovery target
+      if (n > 0) s.target = Core.RECOVERY_START;   // a new stack resets the recovery target
       if (s.n === 0) delete c.stacks[type];
       else c.stacks[type] = s;
     }
@@ -286,8 +289,7 @@
       const success = r !== 1 && r >= s.target;
       let lost = 0;
       if (success) {
-        const half = Math.ceil(s.n / 2);
-        lost = Math.min(s.n, DAMAGING_STACKS.includes(type) ? Math.max(3, half) : half);
+        lost = Core.recoveryLoss(type, s.n);
         addStacks(c, type, -lost);
       }
       return { roll: r, target: s.target, success, lost, left: c.stacks[type] ? c.stacks[type].n : 0 };
@@ -310,7 +312,7 @@
 
     // ---------- Movement ----------
 
-    const movement = c => Math.max(2, 5 + ((c.stats && c.stats.SPD) || 0));
+    const movement = c => Core.movement(c.stats && c.stats.SPD);
 
     function footprint(c) {
       const [w, h] = FOOTPRINT[c.size] || [1, 1];

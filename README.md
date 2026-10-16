@@ -1,24 +1,36 @@
 # Primordium Tools
 
-Three apps for Primordium 2.0 that share one copy of the game data.
+Three apps for Primordium 2.0 that share one copy of the game's rules and data, and one look (light or dark).
 
 | Folder | What it is | Live link |
 |---|---|---|
 | `sheet/` | Player character sheet (phone app, works offline) | https://theostriche.github.io/primordium-tools/sheet/ |
 | `gm/` | GM combat tool (laptop) | https://theostriche.github.io/primordium-tools/gm/ |
 | `codex/` | Rules reference: skills, creatures, rules, dice, and the tactical deck (phone app, works offline) | https://theostriche.github.io/primordium-tools/codex/ |
-| `shared/` | `primordium-data.js` (every skill, race, and trait), `npc-data.js` (every creature), `character-rules.js` (how a sheet's stats, HP, and armor add up), `tactics-deck.js` (the tactical deck and every Tactics mechanic), `dice.js` (dice rolls), and `fx.js` (impact effects), used by the apps | |
+| `shared/` | What all of them use: rule tables, game data, the deck, dice, effects, and the look | |
 
-The site's front page (`index.html`) links to all three apps.
+The site's front page (`index.html`) links to all three. How everything fits together, file by file, is in `ARCHITECTURE.md`.
+
+## Light and dark
+
+Every app follows your device's light or dark setting. The round button at the top of each app switches between **System**, **Light**, and **Dark**; the choice is remembered and shared by all three apps on that device.
 
 ## Changing the game data
 
-Edit `shared/primordium-data.js` (skills, races, traits) or `shared/npc-data.js` (creatures) once and every app picks it up. Then raise `VERSION` in `sheet/sw.js` (for example `primordium-v8` to `primordium-v9`) and in `codex/sw.js` (for example `codex-v1` to `codex-v2`) so installed phones download the new data.
+- Skills, races, and traits: `shared/primordium-data.js`. Creatures: `shared/npc-data.js`.
+- Rule tables (rarities, the D20 tactics table, cooldowns, XP, stacks, movement): `shared/core.js`.
+- Codex-only rules text and tables: `codex/codex-data.js`.
+
+Edit once and every app picks it up. Then raise the version in `sheet/sw.js` and `codex/sw.js` (for example `codex-v4` to `codex-v5`) so installed phones download the new data.
 
 ## Opening the apps on this computer
 
 - **GM tool:** double-click `gm/index.html`.
 - **All apps the way the website serves them:** run `node tools/serve.js` in this folder, then visit http://localhost:8080.
+
+## Checking everything still works
+
+Run `node tools/test.js`. It checks the shared rule tables, the tactical deck at every Tactics level, the GM tool's game math and combat rules, and (if Python is installed) the Codex's guide parser.
 
 ## Publishing
 

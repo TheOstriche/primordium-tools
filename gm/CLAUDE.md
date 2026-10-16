@@ -1,11 +1,11 @@
 # Primordium GM Tool
 
-A laptop web app for running combat in **Primordium 2.0**, an original tabletop RPG designed and run by the owner of this project. It is the GM's companion to the player phone app, which lives beside it in `../sheet/` in the same repository (see the top-level `CLAUDE.md`).
+A laptop web app for running combat in **Primordium 2.0**, an original tabletop RPG designed and run by the owner of this project. It is the GM's companion to the player phone app (`../sheet/`) and the Codex (`../codex/`) in the same repository; see the top-level `CLAUDE.md` and `../ARCHITECTURE.md`.
 
 ## Decisions already made
 - **Platform:** a static web app (HTML, CSS, JavaScript, no build step required) that runs locally by opening it, and is published with **GitHub Pages** like the player app.
 - **Laptop first:** designed for a laptop screen with mouse and keyboard; it does not need to work on phones.
-- **Players are entered manually** in the GM tool (name, HP, armor, the six stats, Speed for movement). No import from the player app.
+- **Players** are entered in the GM tool (name, HP, armor, Speed, Perception, level), or imported from a character sheet backup (see "Added 2026-10-09").
 - **Grid:** a plain grid, with an **optional map image** the GM can upload underneath it. 1 square = 1M.
 - **Saving:** everything is saved locally in the browser (encounters, players, map images). IndexedDB suits map images; include export and import of a backup file.
 - **Rules** follow `docs/rules.md` exactly. When something is unclear, ask the owner rather than inventing a rule.
@@ -41,15 +41,17 @@ All eight features are built. Tabs: Encounter, Combat (grid map and combat in on
 - **Allies:** initiative 5 + Perception like other NPCs; ties go players, then allies, then enemies. They are not counted in the difficulty estimate and take no XP share. They are defeated at 0 HP (no death clock), and act in the players' surprise phase.
 - **Quick and Defensive enemy abilities:** the NPC data does not mark ability type yet. Until it does, treat every enemy ability as a Standard ability (rolled on the tactics table). Abilities accept an optional `type` field (the creature builder sets it).
 - The owner's rulings (diagonals, Boss turns, recovery, rounding, defeat at 0 HP, damage order, cooldowns, Boss budgets, race stat order) are in `docs/rules.md` under "GM rulings".
-- Data note: some arc attacks are flagged `area` and others are not (the Boss "180 degree arc" attacks and Forge Lord's Flame Thrower are not).
+- Arc attacks (180 and 90 degree arcs) are area attacks (owner, 2026-10-15). Stack recovery: the sheet lowers the target after each roll, the GM tool each phase; the owner accepts this. Conditions the GM can mark: Disoriented, Calmed, Enraged, Terrified (Entrapped was removed: the guides do not define it).
 
 ## Data files
 - `../shared/npc-data.js` sets `window.PRIMORDIUM_NPCS`: 97 creatures with role, level, tactics, HP, armor, size, stats, XP, attributes, description, and abilities. Each ability has a name, rarity, optional cooldown (phases, or "combat" for once per combat), its text, and where it is a damaging strike an `attack` object (`strikes`, `dice`, `sides`, `flat`, optional `ap`, `area`, `ignoreArmor`). Humanoids have `humanoid: true` and a `combatSkill` text instead of abilities. Bosses have `turnsPerPhase: 2`. Slimes and bonded mimics have no HP (`specialHp` explains their rule).
 - `data/scaling.json` and `docs/scaling.md`: player benchmarks per power step, role and armor-class budgets, and the encounter difficulty formula (section 8 of `scaling.md`, which supersedes the short difficulty note in `rules.md`). Because the app opens without a server, load this data as a `.js` file that sets a global (like the other data files), kept in sync with the JSON.
-- `../shared/primordium-data.js` sets `window.PRIMORDIUM_DATA`: every skill (with each tier's abilities and perks), races, and background traits. Shared with the player app: it is the one copy both apps load, so edit it there only.
+- `../shared/primordium-data.js` sets `window.PRIMORDIUM_DATA`: every skill (with each tier's abilities and perks), races, and background traits. Shared with the sheet and the Codex: it is the one copy, so edit it there only.
+- `../shared/core.js` sets `window.PrimordiumCore`: rarities, the D20 tactics table, cooldowns, stacks and recovery, movement, roles. `js/rules.js`, `js/combat-engine.js`, and `js/skills.js` read it (in Node through `require`), so the tests check the same tables the apps use.
 
 ## Style
-- The owner's guides use Times New Roman with a classic printed-rulebook feel. A dark, readable theme with a serif for headings suits the game; keep it clean and uncluttered for use mid-session.
+- The tool uses the shared house style (`../shared/theme.css`, the Codex's look), in light or dark (`../shared/theme.js`; the round button in the top bar). `css/style.css` holds only the GM tool's layout; use theme tokens, never fixed colors (map tokens excepted).
+- Keep it clean and uncluttered for use mid-session.
 - Write all text in plain language. Name things the way the guides do (Phase, Tactics, Standard, Elite, stacks, and so on).
 
 ## Working with the owner

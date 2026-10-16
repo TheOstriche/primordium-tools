@@ -1,5 +1,6 @@
 // Primordium Codex: rules, tables, and lore the shared files do not hold, hand-transcribed from Game Guide 2.0 and NPC Guide 2.0.
-// Skills, races (stats and specials), traits, and creatures come from ../shared/. Edit game text here only to match the guides.
+// Skills, races (stats and specials), traits, and creatures come from ../shared/; rarities, the tactics table,
+// cooldowns, and XP come from ../shared/core.js. Edit game text here only to match the guides.
 window.CODEX_DATA = {
  "raceLore": {
   "Imperios": {
@@ -820,15 +821,6 @@ window.CODEX_DATA = {
   }
  ],
  "tables": {
-  "rarities": [
-   "Basic",
-   "Common",
-   "Uncommon",
-   "Rare",
-   "Epic",
-   "Legendary",
-   "Mythic"
-  ],
   "deck": [
    {
     "rarity": "Basic",
@@ -873,124 +865,6 @@ window.CODEX_DATA = {
     "pip": "✦"
    }
   ],
-  "tactics": {
-   "Basic": {
-    "Basic": [
-     1,
-     20
-    ]
-   },
-   "Fair": {
-    "Basic": [
-     1,
-     10
-    ],
-    "Common": [
-     11,
-     16
-    ],
-    "Uncommon": [
-     17,
-     20
-    ]
-   },
-   "Good": {
-    "Basic": [
-     1,
-     6
-    ],
-    "Common": [
-     7,
-     12
-    ],
-    "Uncommon": [
-     13,
-     18
-    ],
-    "Rare": [
-     19,
-     20
-    ]
-   },
-   "Great": {
-    "Basic": [
-     1,
-     4
-    ],
-    "Common": [
-     5,
-     9
-    ],
-    "Uncommon": [
-     10,
-     14
-    ],
-    "Rare": [
-     15,
-     18
-    ],
-    "Epic": [
-     19,
-     20
-    ]
-   },
-   "Excellent": {
-    "Common": [
-     1,
-     5
-    ],
-    "Uncommon": [
-     6,
-     10
-    ],
-    "Rare": [
-     11,
-     15
-    ],
-    "Epic": [
-     16,
-     19
-    ],
-    "Legendary": [
-     20,
-     20
-    ]
-   },
-   "Mythic": {
-    "Uncommon": [
-     1,
-     6
-    ],
-    "Rare": [
-     7,
-     12
-    ],
-    "Epic": [
-     13,
-     16
-    ],
-    "Legendary": [
-     17,
-     19
-    ],
-    "Mythic": [
-     20,
-     20
-    ]
-   }
-  },
-  "cooldowns": {
-   "Rare": 1,
-   "Epic": 2,
-   "Legendary": 3,
-   "Mythic": "once per combat"
-  },
-  "roles": {
-   "Minion": 0.25,
-   "Standard": 1,
-   "Elite": 3,
-   "Boss": 10
-  },
   "sizes": [
    [
     "Tiny",

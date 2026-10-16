@@ -4,7 +4,7 @@
 (function () {
   const { h, fill, fmt, toast } = UI;
   const S = () => Store.state;
-  const RARITIES = ['Basic', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'];
+  const { RARITIES, reachableRarities } = window.PrimordiumCore;
   const TYPES = ['Standard', 'Quick', 'Defensive'];
   const ARMOR_CLASSES = ['None', 'Light', 'Medium', 'Heavy'];
 
@@ -270,8 +270,7 @@
     }
     if (sug.minTactics && GameData.TACTICS.indexOf(d.tactics) < GameData.TACTICS.indexOf(sug.minTactics)) warnings.push(d.role + 's need at least ' + sug.minTactics + ' tactics.');
     if (d.role === 'Boss' && (d.turnsPerPhase || 1) < 2) warnings.push('Bosses take 2 turns per phase.');
-    const tacticsRow = Rules.TACTICS_TABLE[d.tactics] || [];
-    const missing = tacticsRow.map(r => r[0]).filter(r => !d.humanoid && !(d.abilities || []).some(a => a.rarity === r));
+    const missing = reachableRarities(d.tactics).filter(r => !d.humanoid && !(d.abilities || []).some(a => a.rarity === r));
     if (missing.length && !d.humanoid) warnings.push('Its tactics can roll ' + missing.join(', ') + ' but it has no ability at ' + (missing.length > 1 ? 'those rarities' : 'that rarity') + ' (it will drop a rarity).');
 
     const apply = (key, value) => { draft[key] = value; redraw(); };

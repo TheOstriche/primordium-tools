@@ -1,22 +1,20 @@
 # Primordium Tools
 
-One repository (`TheOstriche/primordium-tools`, published with GitHub Pages) holding three static web apps for **Primordium 2.0**, the owner's original tabletop RPG.
+One repository (`TheOstriche/primordium-tools`, published with GitHub Pages) holding three static web apps for **Primordium 2.0**, the owner's original tabletop RPG. Read `ARCHITECTURE.md` first: it maps every folder, shared file, saved-data key, and the reasons behind the layout.
 
-- `gm/`: the GM combat tool (laptop). Its full brief is `gm/CLAUDE.md`.
-- `sheet/`: the player character sheet (phone, installable, offline through `sheet/sw.js`). Notes in `sheet/README.md`.
-- `codex/`: the rules reference (phone, installable, offline through `codex/sw.js`). Its brief is `codex/CLAUDE.md`.
-- `shared/primordium-data.js`: sets `window.PRIMORDIUM_DATA` (skills with every tier's abilities and perks, races, traits). It is the **only** copy; all three apps load it with `../shared/primordium-data.js`. Put new data that more than one app needs in `shared/`, not inside one app.
-- `shared/npc-data.js`: sets `window.PRIMORDIUM_NPCS` (all creatures from the NPC Guide). The GM tool and the Codex load it.
-- `shared/character-rules.js`: sets `window.PrimordiumCharacter` (what skills grant, and a character's stats, maximum HP, and armor). The sheet computes its totals with it, and the GM tool uses it to import sheet backups, so the two always agree.
-- `shared/tactics-deck.js`: sets `window.PrimordiumDeck`, the tactical deck: builds the cards from a Tactics level (base tier, path, path tier, promotion choices) and runs a hand with every Tactics mechanic. The Codex (any level, picked from a list) and the sheet (the character's own Tactics) both use it, including its HTML. `node tools/test-deck.js` checks it.
-- `shared/dice.js`: sets `window.PrimordiumDice` (dice expressions like `2D6+3`), used by the Codex and the sheet.
-- `shared/fx.js`: sets `window.PrimordiumFX`, impact effects for all three apps (purely for feel, never a rule): card plays escalate from Rare to Mythic, crits (every die at its highest face) and natural 1s (every die at 1), HP damage, healing and going down, combat on and off, breathers and rests. It injects its own styles, honors reduce motion, and reads the viewer's settings from localStorage key `primordium.fx`. `PrimordiumDeck.act` returns `{played, drawn}` for it.
-- `index.html`: landing page linking all three apps.
-- `tools/serve.js`: local server for the whole repository (port 8080). `tools/old-sheet-redirect/`: files that replace the old `Primordium-Player-Sheets` repository's contents.
+- `sheet/`: the player character sheet (phone, installable, offline). Notes in `sheet/README.md`, brief in `sheet/CLAUDE.md`.
+- `codex/`: the rules reference (phone, installable, offline). Brief in `codex/CLAUDE.md`.
+- `gm/`: the GM combat tool (laptop). Brief in `gm/CLAUDE.md`.
+- `shared/`: everything more than one app uses, once: `core.js` (rule tables and helpers), the game data, `character-rules.js`, `tactics-deck.js`, `dice.js`, `fx.js` (impact effects), `theme.css` and `theme.js` (the look, light and dark), `offline.js` (service workers).
+- `index.html`: the front page. `tools/serve.js`: local server (port 8080). `tools/test.js`: runs every test. `tools/old-sheet-redirect/`: replaces the old `Primordium-Player-Sheets` repository's contents.
 
 ## Rules for changes
-- No build step. Each app must still work from a relative path, and the GM tool must still open from a double-clicked `gm/index.html`.
-- When anything the sheet loads changes (its own files or `shared/`), raise `VERSION` in `sheet/sw.js`, and keep its `FILES` list matching what `sheet/index.html` loads. The same goes for the Codex and `codex/sw.js`.
-- Each service worker deletes only its own caches (`primordium-*` for the sheet, `codex-*` for the Codex), because they share one site.
-- All apps are on one site, so they share browser storage. Keep storage names distinct: the sheet uses localStorage key `primordium.characters.v1`; the GM tool uses IndexedDB and the `gm-tab` localStorage key; the Codex uses `codex:*` localStorage keys; effects settings use `primordium.fx` (shared on purpose).
+- No build step. Plain scripts that set globals, loaded in order by each `index.html`; the GM tool must still open from a double-clicked `gm/index.html` (so no ES modules).
+- One copy of everything: a rule table or list goes in `shared/core.js`, game data in `shared/primordium-data.js` or `shared/npc-data.js`, a component or color in `shared/theme.css`. Never copy them into an app.
+- Styling: the Codex is the house style. Use theme tokens (`var(--glow)`, `var(--r-rare)`, …), never fixed colors, and check light and dark.
+- Phone apps: test at about 375–400px wide; nothing may scroll sideways except tables in their own scroll box.
+- When anything a phone app loads changes (its own files or `shared/`), raise the version in its `sw.js` (`primordium-vN` for the sheet, `codex-vN` for the Codex) and keep its file list matching its `index.html`.
+- Storage keys must stay distinct (see `ARCHITECTURE.md`); never change the sheet's `primordium.characters.v1` format without an upgrade step in `sheet/js/store.js`.
+- Game text comes from the owner's guides: don't invent or reword rules. When a rule is unclear, ask.
+- Run `node tools/test.js` after changing rules, data, or the deck.
 - The owner commits and pushes with GitHub Desktop. Git for Windows is at `C:\Program Files\Git\cmd\git.exe`.

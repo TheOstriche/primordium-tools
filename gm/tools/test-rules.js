@@ -17,6 +17,10 @@ function check(label, actual, expected, tolerance = 0.01) {
   console.log((ok ? 'ok   ' : 'FAIL ') + label + ': ' + (+actual.toFixed(3)) + (ok ? '' : ' (expected ' + expected + ')'));
 }
 
+// The scaling workbook's XP multipliers match the shared core (../shared/core.js), which the Codex uses.
+const Core = require(path.join(root, '..', 'shared', 'core.js'));
+for (const [role, r] of Object.entries(S.roles)) check('XP multiplier ' + role + ' matches shared core', r.xpMultiplier, Core.ROLE_XP[role], 0);
+
 // Section 3: step 10 vs armor 5.
 check('dpt step 10 vs armor 5', R.playerDptVsArmor(10, 5), 27.29);
 

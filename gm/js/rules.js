@@ -2,17 +2,9 @@
 // Pure functions only (no screen code), so they can be checked with tools/test-rules.js.
 // Sources: docs/rules.md and docs/scaling.md (data in data/scaling.json).
 (function (root) {
-  const RARITIES = ['Basic', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'];
-
-  // D20 tactics table (rules.md). Each entry: [rarity, lowest roll, highest roll].
-  const TACTICS_TABLE = {
-    Basic:     [['Basic', 1, 20]],
-    Fair:      [['Basic', 1, 10], ['Common', 11, 16], ['Uncommon', 17, 20]],
-    Good:      [['Basic', 1, 6], ['Common', 7, 12], ['Uncommon', 13, 18], ['Rare', 19, 20]],
-    Great:     [['Basic', 1, 4], ['Common', 5, 9], ['Uncommon', 10, 14], ['Rare', 15, 18], ['Epic', 19, 20]],
-    Excellent: [['Common', 1, 5], ['Uncommon', 6, 10], ['Rare', 11, 15], ['Epic', 16, 19], ['Legendary', 20, 20]],
-    Mythic:    [['Uncommon', 1, 6], ['Rare', 7, 12], ['Epic', 13, 16], ['Legendary', 17, 19], ['Mythic', 20, 20]]
-  };
+  // Shared game constants (rarities, the tactics table, stacks): ../shared/core.js.
+  const Core = root.PrimordiumCore || require('../../shared/core.js');
+  const RARITIES = Core.RARITIES;
 
   function make(S) {
     const levelToStep = level => Math.max(0, Math.min(12, Math.ceil((Number(level) || 0) / 2)));
@@ -37,11 +29,7 @@
       return atk.strikes * (atk.dice * (atk.sides + 1) / 2 + (atk.flat || 0) + (atk.perDie || 0) * atk.dice) + (atk.bonus || 0);
     }
 
-    function rarityForRoll(tactics, roll) {
-      const row = TACTICS_TABLE[tactics] || TACTICS_TABLE.Basic;
-      const hit = row.find(([, lo, hi]) => roll >= lo && roll <= hi);
-      return hit ? hit[0] : 'Basic';
-    }
+    const rarityForRoll = Core.rarityForRoll;
 
     // Estimated damage per turn from a stat block: average over the tactics table,
     // dropping a rarity when the creature has no damaging ability at the rolled one.
@@ -158,7 +146,7 @@
     }
 
     return {
-      RARITIES, TACTICS_TABLE, levelToStep, xpFor, playerDptVsArmor, attackAverage,
+      RARITIES, levelToStep, xpFor, playerDptVsArmor, attackAverage,
       rarityForRoll, estimateDamagePerTurn, budgetFor, combatProfile,
       difficultyBand, encounterDifficulty, stepInfo: step, suggestStats, parseAttackText
     };

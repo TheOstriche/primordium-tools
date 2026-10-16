@@ -1,19 +1,17 @@
-// The tactical deck, shared by the Codex and the character sheet. Needs primordium-data.js loaded first.
+// The tactical deck, shared by the Codex and the character sheet. Needs core.js and primordium-data.js loaded first.
 // build(level, picks, suit) turns a Tactics level (base tier, path, path tier) into the actual 52 cards
 // and jokers with their rarities, applying each promotion perk. newState/act/render run a hand of cards
 // with every mechanic the Tactics perks add. State is plain JSON so each app can save it.
 (function (root) {
   const D = root.PRIMORDIUM_DATA;
   const TAC = D.skills.find(s => s.name === 'Tactics');
-  const RAR = ['Basic', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'];
+  const { RARITIES: RAR, esc, article, rarityStep: up } = root.PrimordiumCore;
   const SUITS = [['♠', 'Spades', 'b'], ['♥', 'Hearts', 'r'], ['♦', 'Diamonds', 'r'], ['♣', 'Clubs', 'b']];
   const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   const PLURAL = {J: 'Jacks', Q: 'Queens', K: 'Kings', A: 'Aces'};
   const RIDERS = {Spades: 'Spades rider: reroll one damage die.', Hearts: 'Hearts rider: make a recovery roll, or heal 1D4.',
     Diamonds: 'Diamonds rider: reroll a natural 1 or a failed accuracy roll.', Clubs: 'Clubs rider: +2 armor until your next turn.'};
   const PATHS = Object.keys(TAC.paths);
-  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-  const up = (r, by) => RAR[Math.min(RAR.length - 1, RAR.indexOf(r) + by)];
 
   // Game Guide default: 2-6 and black 7s Basic; red 7s, 8-10, black Jacks Common; red Jacks, Queens,
   // black Kings Uncommon; red Kings, black Aces Rare; red Aces Epic; the joker Legendary.
@@ -169,7 +167,7 @@
     if (s.boost) { rar = up(rar, 1); s.boost = false; s.used.masterPlan = true; }
     played = {rarity: rar, ids};
     const set = new Set(ids); s.discard.push(...ids); s.hand = s.hand.filter(id => !set.has(id)); s.sel = []; drawTo3(s);
-    return `${what} <b>${ids.map(id => name(b, id)).join(' + ')}</b> as ${/^[UEA]/.test(rar) ? 'an' : 'a'} <b>${rar}</b> card. ${riderText(b, ids)}`.trim();
+    return `${what} <b>${ids.map(id => name(b, id)).join(' + ')}</b> as ${article(rar)} <b>${rar}</b> card. ${riderText(b, ids)}`.trim();
   }
 
   // act returns what happened, for the apps' effects: {played: {rarity, ids} | null, drawn: [card ids]}.
@@ -206,7 +204,7 @@
         s.log = 'Battle plan set aside face down. Drew a replacement. Any friendly character may call it once this combat.'; return; }
       case 'callPlan': { if (!s.plan) return; const id = s.plan, ally = arg === 'ally'; let r = value(b, id);
         if (ally && b.f.victoryPlan) r = up(r, 1); s.plan = null; s.discard.push(id); played = {rarity: r, ids: [id]};
-        s.log = `${ally ? 'An ally called' : 'You called'} your battle plan: <b>${name(b, id)}</b> as ${/^[UEA]/.test(r) ? 'an' : 'a'} <b>${r}</b> card.`; return; }
+        s.log = `${ally ? 'An ally called' : 'You called'} your battle plan: <b>${name(b, id)}</b> as ${article(r)} <b>${r}</b> card.`; return; }
       case 'mark': s.used[arg] = !s.used[arg]; return;
       case 'phase': delete s.used.swap; s.log = 'New phase.'; return;
       case 'combat': ['swap', 'rally', 'sideBet', 'fortune'].forEach(k => delete s.used[k]); s.log = 'New combat: once-per-combat abilities are ready.'; return;
@@ -225,7 +223,6 @@
   }
 
   /* ---------- the hand, as HTML (each app styles these classes) ---------- */
-  const article = r => /^[UEA]/.test(r) ? 'an' : 'a';
   function cardHTML(b, id, attrs = '', label) {
     const c = b.byId[id], rar = c.rar, lab = label || (wildJoker(b, id) ? `Wild · ${b.f.wildCap}` : rar);
     return `<button class="pcard r-${rar}" data-card="${esc(id)}" ${attrs} aria-label="${esc(name(b, id))}, ${esc(lab)}"><span class="rk">${c.r === 'JK' ? 'JK' : esc(c.r)}<small>${c.r === 'JK' ? '' : c.s}</small></span><span class="mid">${c.s}</span><span class="lbl">${esc(lab)}</span></button>`;
@@ -273,5 +270,18 @@
     return h;
   }
 
-  root.PrimordiumDeck = {RAR, SUITS, RIDERS, PATHS, LEVELS, levelLabel, grantedAt, build, newState, fit, act, render, combo, value, article};
+  // A tap on a deck button ([data-deck]), the same in every app: act, save and redraw (the app's redraw does both),
+  // then deal the drawn cards in and land the played card's impact (shared/fx.js, when loaded).
+  function tap(s, b, button, redraw) {
+    const fx = root.PrimordiumFX;
+    const from = fx && (fx.rectOf(document.querySelectorAll('.hand .pcard[aria-pressed="true"]')) || fx.lastTap());
+    const ev = act(s, b, button.dataset.deck, button.dataset.i);
+    redraw();
+    if (!fx) return ev;
+    fx.deal(ev.drawn.map(id => document.querySelector(`.hand [data-card="${CSS.escape(id)}"]`)));
+    if (ev.played) fx.card(ev.played.rarity, from);
+    return ev;
+  }
+
+  root.PrimordiumDeck = {RAR, SUITS, RIDERS, PATHS, LEVELS, levelLabel, grantedAt, build, newState, fit, act, tap, render, combo, value};
 })(window);

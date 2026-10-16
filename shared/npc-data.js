@@ -1818,7 +1818,8 @@ window.PRIMORDIUM_NPCS = [
      "strikes": 1,
      "dice": 1,
      "sides": 20,
-     "flat": 3
+     "flat": 3,
+     "area": true
     }
    },
    {
@@ -2584,7 +2585,8 @@ window.PRIMORDIUM_NPCS = [
      "strikes": 1,
      "dice": 1,
      "sides": 20,
-     "flat": 3
+     "flat": 3,
+     "area": true
     }
    },
    {
@@ -2656,7 +2658,8 @@ window.PRIMORDIUM_NPCS = [
      "strikes": 1,
      "dice": 1,
      "sides": 20,
-     "flat": 5
+     "flat": 5,
+     "area": true
     }
    },
    {
@@ -2680,7 +2683,8 @@ window.PRIMORDIUM_NPCS = [
      "strikes": 4,
      "dice": 1,
      "sides": 10,
-     "flat": 5
+     "flat": 5,
+     "area": true
     }
    },
    {
@@ -2733,7 +2737,8 @@ window.PRIMORDIUM_NPCS = [
      "strikes": 1,
      "dice": 1,
      "sides": 20,
-     "flat": 5
+     "flat": 5,
+     "area": true
     }
    },
    {

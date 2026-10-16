@@ -77,6 +77,8 @@
   function refresh() {
     const cb = combat();
     if (!cb || !els.bar || !root.contains(els.bar)) return render(root);
+    // A combat saved earlier may hold a condition that is no longer on the list (Entrapped was removed).
+    for (const c of cb.combatants) c.conditions = c.conditions.filter(x => Combat.CONDITIONS.includes(x));
     if (!selectedId || !Combat.get(cb, selectedId)) {
       const a = activeCombatant(cb);
       selectedId = a ? a.id : (cb.combatants[0] || {}).id;
@@ -331,7 +333,7 @@
       h('span.turn-name', c.name,
         c.dead ? h('span.badge.bad', c.kind === 'player' ? 'dead' : 'defeated') : null,
         Combat.isDowned(c) && !c.dead ? h('span.badge.bad', c.stabilized ? 'stable' : 'downed ' + c.deathClock) : null,
-        stackCount ? h('span.badge', stackCount + ' stacks') : null,
+        stackCount ? h('span.badge', PrimordiumCore.plural(stackCount, 'stack')) : null,
         effects ? h('span.badge', effects + (effects === 1 ? ' effect' : ' effects')) : null),
       hpMini(c),
       h('span.order-btns',

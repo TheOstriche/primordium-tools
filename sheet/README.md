@@ -26,16 +26,22 @@ Characters are stored on each phone. Use **⋯ → Export all characters** to sa
 
 ## Publishing changes
 
-When you change any file here or `../shared/primordium-data.js`, also raise `VERSION` in `sw.js` (for example `primordium-v2`). That tells installed phones to download the new version instead of using the cached one.
+When you change any file here or anything it loads from `../shared/`, raise the version in `sw.js` (for example `primordium-v11` to `primordium-v12`) and keep its file list matching what `index.html` loads. That tells installed phones to download the new version instead of using the cached one.
 
 ## Files
 
-- `index.html`: the app shell
-- `app.js`: screens, rules, and saving
-- `data.js`: sheet layout lists (stats, stacks, rarities, gear slots)
-- `../shared/primordium-data.js` (shared with the GM tool and the Codex): full Primordium 2.0 data (every skill tier's abilities and perks, races, and traits)
+- `index.html`: the app shell; it loads the shared files, then the sheet's own scripts in this order:
+  - `data.js`: lists only the sheet uses (resources, conditions, materials, weapons, armor slots)
+  - `js/store.js`: saving, new characters, upgrading characters saved by older versions, and what is on screen
+  - `js/rules.js`: totals (stats, HP, armor, carrying, warnings), stacks, and the deck
+  - `js/ui.js`: toasts, form fields, the dice tray log, impact effects on HP
+  - `js/views.js`: the character list and the five tabs
+  - `js/sheets.js`: bottom sheets (add an effect, equip or edit an item)
+  - `js/app.js`: actions, every tap (the `TAPS` table), forms, and the ⋯ menu
+- `../shared/core.js` (shared with every app): rarities, stats, stacks and recovery, XP, movement
+- `../shared/primordium-data.js` and `../shared/character-rules.js` (shared with the GM tool and the Codex): every skill, race, and trait, and how they add up
 - `../shared/tactics-deck.js` and `../shared/dice.js` (shared with the Codex): the tactical deck and dice rolls
 - `../shared/fx.js` (shared with the Codex and the GM tool): impact effects for rolls, cards, HP, combat, and rests. Turn them, sound, or vibration on and off in **⋯ → Effects**.
-- `style.css`: the look
+- `style.css`: the sheet's layout. Colors, fonts, buttons, the dice tray, and the deck come from `../shared/theme.css`; light or dark follows the device, or the round button at the top.
 - `sw.js`: offline support
 - `manifest.webmanifest` and `icons/`: home screen install

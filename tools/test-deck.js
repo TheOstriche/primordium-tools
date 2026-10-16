@@ -3,7 +3,7 @@
 // Run: node tools/test-deck.js
 const fs = require('fs'), path = require('path');
 global.window = {};
-for (const f of ['primordium-data.js', 'tactics-deck.js']) eval(fs.readFileSync(path.join(__dirname, '..', 'shared', f), 'utf8'));
+for (const f of ['core.js', 'primordium-data.js', 'tactics-deck.js']) eval(fs.readFileSync(path.join(__dirname, '..', 'shared', f), 'utf8'));
 const K = window.PrimordiumDeck;
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) fails++; };

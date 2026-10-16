@@ -1,11 +1,10 @@
 // Character rules shared by the player sheet and the GM tool: what a character's skills grant,
 // and the totals that follow from a sheet (stats, maximum HP, armor).
-// Needs primordium-data.js loaded first.
+// Needs core.js and primordium-data.js loaded first.
 (function (root) {
   const D = root.PRIMORDIUM_DATA;
   const SK = Object.fromEntries(D.skills.map(s => [s.name, s]));
-  const STATS = ['STR', 'AGI', 'KNO', 'SPD', 'PER', 'SPE'];
-  const STATK = { Strength: 'STR', Agility: 'AGI', Knowledge: 'KNO', Speed: 'SPD', Perception: 'PER', Speech: 'SPE' };
+  const { STATS, STAT_KEYS: STATK } = root.PrimordiumCore;
   const n = v => Number(v) || 0;
 
   // Every ability and perk a character's skill tiers grant.

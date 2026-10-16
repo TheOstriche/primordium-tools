@@ -4,7 +4,11 @@
 // saved in localStorage under primordium.fx: {visual, sound, haptics}.
 (function (root) {
   const KEY = 'primordium.fx';
-  const COLOR = {Basic: '#9b98a6', Common: '#d2c9b4', Uncommon: '#76c27a', Rare: '#6aa2ec', Epic: '#b884ea', Legendary: '#eab14c', Mythic: '#f0685d'};
+  const { RARITIES } = root.PrimordiumCore;   // needs core.js loaded first
+  // Rarity colors come from shared/theme.css (--r-basic ... --r-mythic), so effects match the current theme.
+  const color = rarity => (getComputedStyle(document.documentElement).getPropertyValue('--r-' + String(rarity).toLowerCase()).trim() || '#eab14c');
+  // Glows add light on a dark page; on a light page they would vanish, so they paint normally there.
+  const lightPage = () => document.documentElement.dataset.theme === 'light';
   const GOLD = '#eab14c', RED = '#e0604f', GREEN = '#6fd39a', ASH = '#8d8a96';
   let cfg = {visual: true, sound: false, haptics: true};
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
@@ -57,7 +61,7 @@
   /* ---------- drawing ---------- */
   const rand = (a, b) => a + Math.random() * (b - a);
   function loop() {
-    cx.setTransform(DPR, 0, 0, DPR, 0, 0); cx.clearRect(0, 0, W, H); cx.globalCompositeOperation = 'lighter';
+    cx.setTransform(DPR, 0, 0, DPR, 0, 0); cx.clearRect(0, 0, W, H); cx.globalCompositeOperation = lightPage() ? 'source-over' : 'lighter';
     for (let i = rays.length - 1; i >= 0; i--) {
       const r = rays[i]; r.t++; const k = r.t / r.life; if (k >= 1) { rays.splice(i, 1); continue; }
       const a = Math.sin(Math.PI * k) * .16, len = Math.max(W, H) * (.35 + k * .45);
@@ -141,7 +145,7 @@
   const SCALE = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093];
   function sound(kind, rarity) {
     if (!cfg.sound) return;
-    if (kind === 'card') { const i = Math.max(0, Object.keys(COLOR).indexOf(rarity)); tone(180 + i * 30, 0, .12, 'triangle', .05);
+    if (kind === 'card') { const i = Math.max(0, RARITIES.indexOf(rarity)); tone(180 + i * 30, 0, .12, 'triangle', .05);
       for (let j = 0; j <= Math.max(0, i - 2); j++) tone(SCALE[j] * (i >= 6 ? .5 : 1), .05 + j * .07, .5 + i * .08, 'sine', .045); if (i >= 5) tone(SCALE[0] / 4, .02, 1.2, 'sawtooth', .025); }
     if (kind === 'crit') [0, 4, 7, 12].forEach((s, j) => tone(523.25 * Math.pow(2, s / 12), j * .05, .6, 'triangle', .05));
     if (kind === 'fumble') { tone(160, 0, .35, 'sawtooth', .04); tone(110, .1, .5, 'sine', .06); }
@@ -151,6 +155,14 @@
   }
 
   /* ---------- where an effect starts ---------- */
+  // Where the last tap landed (the tapped button's box), so an effect can start there even after a redraw.
+  let tapped = null;
+  if (typeof document !== 'undefined') document.addEventListener('pointerdown', e => {
+    const b = e.target.closest && e.target.closest('button');
+    tapped = b ? b.getBoundingClientRect() : null;
+  }, true);
+  const lastTap = () => tapped;
+
   function point(o) {
     const mid = {x: root.innerWidth / 2, y: root.innerHeight * .45};
     if (!o) return mid;
@@ -172,7 +184,7 @@
   function card(rarity, origin) {
     sound('card', rarity);
     const T = TIER[rarity]; if (!T || !live()) return; ensure();
-    const {x, y} = point(origin), c = COLOR[rarity];
+    const {x, y} = point(origin), c = color(rarity);
     vibrate(T.hz);
     if (reduced()) { flash(`radial-gradient(circle at ${x}px ${y}px, ${c}55, transparent 60%)`, .9, 700); if (T.banner) banner(rarity, c, T.banner * .8, '', rarity === 'Mythic'); return; }
     if (T.vignette) flash(`radial-gradient(circle at ${x}px ${y}px, transparent 15%, #12060a 85%)`, .75, 1500);
@@ -271,5 +283,21 @@
   // Which element shakes (each app's main column; fixed headers and tab bars stay put).
   const configure = o => { if (o && o.shake) shakeSel = o.shake; };
 
-  root.PrimordiumFX = {COLOR, card, roll, judge, tumble, deal, hp, sparkle, fizzle, beat, mood, banner: (t, c, s) => live() && banner(t, c || GOLD, s || 1), rectOf, settings, configure};
+  // The effects settings as on/off rows (.fxrow and .seg in shared/theme.css). Put the markup anywhere and pass
+  // clicks inside it to settingsClick(); it saves the choice, redraws the rows, and plays a sample.
+  const SETTINGS = [['visual', 'Impact effects'], ['sound', 'Sound'], ['haptics', 'Vibration']];
+  const settingsHTML = () => SETTINGS.map(([k, label]) => `<div class="fxrow"><span>${label}</span><div class="seg" role="group" aria-label="${label}">${
+    [[true, 'On'], [false, 'Off']].map(([v, l]) => `<button type="button" aria-pressed="${cfg[k] === v}" data-fx="${k}" data-v="${v}">${l}</button>`).join('')}</div></div>`).join('');
+  function settingsClick(e, box) {
+    const b = e.target.closest('[data-fx]');
+    if (!b) return false;
+    const on = b.dataset.v === 'true', key = b.dataset.fx, at = b.getBoundingClientRect();
+    settings({ [key]: on });
+    if (box) box.innerHTML = settingsHTML();
+    if (on && key !== 'haptics') card(key === 'visual' ? 'Epic' : 'Rare', at);   // a sample
+    return true;
+  }
+
+  root.PrimordiumFX = {card, roll, judge, tumble, deal, hp, sparkle, fizzle, beat, mood, banner: (t, c, s) => live() && banner(t, c || GOLD, s || 1),
+    rectOf, lastTap, settings, settingsHTML, settingsClick, configure};
 })(window);
