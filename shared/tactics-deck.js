@@ -156,6 +156,28 @@
     else base = RAR[Math.min(RAR.indexOf(b.f.wildCap), RAR.length - 1 - step)];
     const i = RAR.indexOf(base) + step; return i < RAR.length ? RAR[i] : null;
   }
+  // Pairs (Game Guide): two cards of one rarity play as one card a rarity higher, and a paired card may itself be
+  // paired (2026-10-17): two Epics make a Legendary, and that with a Legendary (or the joker) makes a Mythic.
+  // Every selected card is used. Wild jokers count as any rarity up to their cap. Returns the result, or null.
+  function pairUp(b, ids) {
+    if (ids.length < 2 || ids.length > 3) return null;
+    const upOne = r => RAR.indexOf(r) < RAR.length - 1 ? RAR[RAR.indexOf(r) + 1] : null;
+    const higher = (x, y) => !y || (x && RAR.indexOf(x) > RAR.indexOf(y)) ? x : y;
+    const chain = v => {   // the best result for one set of rarities
+      if (v.length === 2) return v[0] === v[1] ? upOne(v[0]) : null;
+      let out = null;
+      for (const [i, j, k] of [[0, 1, 2], [0, 2, 1], [1, 2, 0]]) {
+        const made = v[i] === v[j] ? upOne(v[i]) : null;
+        if (made && made === v[k]) out = higher(upOne(made), out);
+      }
+      return out;
+    };
+    const choices = ids.map(id => wildJoker(b, id) ? RAR.slice(0, RAR.indexOf(b.f.wildCap) + 1) : [b.byId[id].rar]);
+    let best = null;
+    const each = (i, v) => { if (i === ids.length) best = higher(chain(v), best); else choices[i].forEach(r => each(i + 1, [...v, r])); };
+    each(0, []);
+    return best;
+  }
   function riderText(b, ids) {
     const suits = ids.map(id => b.byId[id].suit);
     const out = [...new Set(suits.filter(s => s && b.riders.includes(s)))].map(s => RIDERS[s]);
@@ -183,7 +205,8 @@
     switch (action) {
       case 'sel': { const i = +arg; s.sel = s.sel.includes(i) ? s.sel.filter(x => x !== i) : [...s.sel, i].slice(-3); return; }
       case 'play': if (one) s.log = pay(s, b, [one], value(b, one), 'Played'); return;
-      case 'pair': case 'three': { const r = combo(b, picked); if (r && picked.length === (action === 'pair' ? 2 : 3)) s.log = pay(s, b, picked, r, action === 'pair' ? 'Paired' : 'Three of a kind:'); return; }
+      case 'pair': { const r = pairUp(b, picked); if (r) s.log = pay(s, b, picked, r, 'Paired'); return; }
+      case 'three': { const r = picked.length === 3 && b.f.threeKind ? combo(b, picked) : null; if (r) s.log = pay(s, b, picked, r, 'Three of a kind:'); return; }
       case 'reeval': { if (!picked.length) return; const n = picked.length, set = new Set(picked);
         s.discard.push(...picked); s.hand = s.hand.filter(id => !set.has(id)); s.sel = []; drawTo3(s);
         s.log = `Re-Evaluate: discarded ${n}, drew back to ${s.hand.length}. Uses your Standard action.`; return; }
@@ -229,7 +252,7 @@
   }
   function render(s, b, opts = {}) {
     const picked = s.sel.map(i => s.hand[i]).filter(Boolean), f = b.f;
-    const pairTo = picked.length === 2 ? combo(b, picked) : null, threeTo = picked.length === 3 && f.threeKind ? combo(b, picked) : null;
+    const pairTo = pairUp(b, picked), threeTo = picked.length === 3 && f.threeKind ? combo(b, picked) : null;
     const best = s.hand.reduce((m, id) => Math.max(m, RAR.indexOf(value(b, id))), -1);
     const btn = (act, label, on, cls = 'btn', i = '') => `<button class="${cls}" data-deck="${act}" ${i !== '' ? `data-i="${esc(i)}"` : ''} ${on ? '' : 'disabled'}>${label}</button>`;
     const one = picked.length === 1, top = s.draw[0];
@@ -247,7 +270,7 @@
     if (f.battlePlan) slots.push(`<div class="slot"><span>Battle plan</span>${s.plan ? '<div class="pcard facedown" aria-label="Battle plan, face down"><span class="mid">✦</span><span class="lbl">Face down</span></div>' : '<div class="pcard empty">None</div>'}</div>`);
     if (slots.length) h += `<div class="slots">${slots.join('')}</div>`;
     h += `<p class="deck-note">${s.hand.length ? `Tap cards to select. This hand can pay up to <b>${RAR[best]}</b>.` : 'Out of cards: Basic abilities still work with no card.'}${s.boost ? ' <b>Master Plan is ready.</b>' : ''}</p>`;
-    h += `<div class="btns">${btn('play', 'Play card', one)}${btn('pair', 'Play pair' + (pairTo ? ' as ' + pairTo : ''), !!pairTo)}${f.threeKind ? btn('three', 'Play three' + (threeTo ? ' as ' + threeTo : ''), !!threeTo) : ''}${btn('reeval', 'Re-Evaluate', picked.length > 0, 'btn ghost')}</div>`;
+    h += `<div class="btns">${btn('play', 'Play card', one)}${btn('pair', (picked.length === 3 ? 'Play pairs' : 'Play pair') + (pairTo ? ' as ' + pairTo : ''), !!pairTo)}${f.threeKind ? btn('three', 'Play three' + (threeTo ? ' as ' + threeTo : ''), !!threeTo) : ''}${btn('reeval', 'Re-Evaluate', picked.length > 0, 'btn ghost')}</div>`;
     const tac = [];
     if (f.quickReeval) tac.push(btn('quick', 'Quick Re-Evaluation', one, 'btn ghost'));
     if (f.stackDeck) tac.push(btn('peek', 'Stack the Deck', s.draw.length > 0, 'btn ghost'));
@@ -283,5 +306,5 @@
     return ev;
   }
 
-  root.PrimordiumDeck = {RAR, SUITS, RIDERS, PATHS, LEVELS, levelLabel, grantedAt, build, newState, fit, act, tap, render, combo, value};
+  root.PrimordiumDeck = {RAR, SUITS, RIDERS, PATHS, LEVELS, levelLabel, grantedAt, build, newState, fit, act, tap, render, combo, pairUp, value};
 })(window);

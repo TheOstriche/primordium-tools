@@ -241,7 +241,14 @@ function tablesHTML(T) {
     T.wealth.map(w => `<tr><td class="n">${w.roll}</td><td class="n">${w.marks}</td><td>${esc(w.gear)}</td></tr>`))}</div>
 
   ${sec('Materials')}
-  ${table(['Tier', 'Material', 'Notes'], T.materials.map(([t, n, d]) => `<tr><td class="n">${t}</td><td><b>${esc(n)}</b></td><td>${esc(d)}</td></tr>`))}
+  ${table(['Tier', 'Material', 'Notes'], Core.MATERIALS.map(([t, n, d]) => `<tr><td class="n">${t}</td><td><b>${esc(n)}</b></td><td>${esc(d)}</td></tr>`))}
+
+  ${sec('Prices')}
+  ${table(T.prices.columns, T.prices.rows.map(([item, ...cost]) => `<tr><td><b>${esc(item)}</b></td>${cost.map(m => `<td class="n">${Number(m).toLocaleString()}</td>`).join('')}</tr>`))}
+  <p class="note">${esc(T.prices.note)}</p>
+
+  ${sec('Condition')}
+  ${table(T.condition.columns, T.condition.rows.map(([item, value]) => `<tr><td><b>${esc(item)}</b></td><td>${esc(value)}</td></tr>`))}
 
   ${sec('Potions and consumables')}
   ${table(['Item', 'Effect', 'Marks'], T.consumables.map(([n, e, m]) => `<tr><td><b>${esc(n)}</b></td><td data-ctx="${esc(n)}">${linkDice(e)}</td><td class="n">${m}</td></tr>`))}

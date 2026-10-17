@@ -1,6 +1,6 @@
 // Primordium Codex: rules, tables, and lore the shared files do not hold, hand-transcribed from Game Guide 2.0 and NPC Guide 2.0.
 // Skills, races (stats and specials), traits, and creatures come from ../shared/; rarities, the tactics table,
-// cooldowns, and XP come from ../shared/core.js. Edit game text here only to match the guides.
+// cooldowns, XP, and materials come from ../shared/core.js. Edit game text here only to match the guides.
 window.CODEX_DATA = {
  "raceLore": {
   "Imperios": {
@@ -319,6 +319,74 @@ window.CODEX_DATA = {
   "Mages": {
    "group": "Humanoids",
    "flavor": "Trained practitioners of magic, from novices to masters."
+  },
+  "Outlaws": {
+   "group": "Humanoids",
+   "flavor": "Thieves, deserters, and desperate folk who have taken to the roads. Most outlaw bands are loosely organized around whoever is strongest, and they prefer an easy ambush to a fair fight. Many will flee or surrender once their leader falls."
+  },
+  "The Dark Harvest": {
+   "group": "Monsters",
+   "flavor": "When a field's tribute to Meshka is withheld, the harvest turns. Crows gather in numbers no one can count, straw rises from the fields, and the scarecrow in the furthest row begins to walk. A Dark Harvest ends when the Scarecrow falls or when tribute is finally paid."
+  },
+  "Cult of the Dark Talon": {
+   "group": "Humanoids",
+   "flavor": "Avranahn rarely acts, but some mortals cannot wait for death to come in its own time. The Cult of the Dark Talon hunts for Avranahn's lost dagger and offers lives to hasten its return. Its shrines hide in crypts and old battlefields, and its members carry hooked knives in imitation of their Nahn."
+  },
+  "Corsairs of the Isles": {
+   "group": "Humanoids",
+   "flavor": "Not every Druna crew sails for trade. Corsair ships prowl the waters around the Isles of Drune and the river mouths below Lyra's Well, boarding merchants and holding ports to ransom. They fight with the same coordination that makes the Druna famous, and a corsair crew moves as one."
+  },
+  "Mesa Beasts": {
+   "group": "Beasts",
+   "flavor": "The Cracked Mesa is a broken plateau of red rock and dry canyons beneath an open sky. Vira's winds scour it constantly, and the creatures that live there are fast, sharp-eyed, and used to hunting in the open."
+  },
+  "Falkrin's Masks": {
+   "group": "Monsters",
+   "flavor": "Falkrin delights in deception and rewards those who deceive in its name. Its servants wear borrowed faces in courts and markets, trading in secrets and turning allies against one another. The truly devoted are given Falkrin's gift: a face that is never their own."
+  },
+  "Peak Dwellers": {
+   "group": "Monsters",
+   "flavor": "Kato's Peaks rise sharp and broken along the west of the continent. Kato's stone and Vidrikai's winds meet here, and the creatures of the peaks are as hard as the rock and as quick as the gusts that tear across it."
+  },
+  "Obsidian Coast Beasts": {
+   "group": "Beasts",
+   "flavor": "Where the Scar of Primordium meets the northern sea, the shore is black volcanic glass. The tide grinds it to razor sand, and the creatures there have taken on the coast's edges and heat."
+  },
+  "Ash Corsairs": {
+   "group": "Humanoids",
+   "flavor": "Magnion raiders who sail from the Obsidian Coast in black-hulled ships. Their axes are cast from the same lava as their homes, and they raid for glory as much as plunder."
+  },
+  "Dune Beasts": {
+   "group": "Beasts",
+   "flavor": "The Southern Dunes are a sea of pale sand to the south-east, broken by wind-carved stone. Very little lives on the surface. Most of what lives there waits below it."
+  },
+  "Dune Nomads": {
+   "group": "Humanoids",
+   "flavor": "Nomad clans cross the Southern Dunes by the old water roads. Most trade fairly with travelers who respect the desert's laws; some clans raid caravans that do not."
+  },
+  "Eldrius's Gilded": {
+   "group": "Monsters",
+   "flavor": "Eldrius gives the Greed Stone to mortals who want more than they have. What it touches turns to gold, and so, slowly, does its keeper. The Gilded are those it has claimed: mortals and makers alike, gleaming, hungry, and never satisfied."
+  },
+  "The Great Hunts": {
+   "group": "Beasts",
+   "flavor": "Kled warriors measure their stories by their hunts, and the Frostlands give them prey worth the telling. Glacian's cold shaped these creatures: huge, slow to anger, and terrible once roused."
+  },
+  "Aubrekian's Chosen": {
+   "group": "Monsters",
+   "flavor": "Aubrekian gives gifts at random and laughs at what they do. Its chosen are those it has touched: some only giggle and claw, others have stopped being any one thing at all."
+  },
+  "Scarborn": {
+   "group": "Monsters",
+   "flavor": "The Scar of Primordium is a black wound across the north where raw Primordium bleeds into the world. Nothing there keeps its shape. The Shattered creatures found across the land began here, and deeper in the Scar are things that were never anything else."
+  },
+  "The Deep": {
+   "group": "Monsters",
+   "flavor": "Below Lyra's Well and beyond the Isles of Drune, the water goes down further than any diver has followed. Lyra's waters keep their own creatures, and some of them are older than the ships that sail above."
+  },
+  "Elementals of the Dahn": {
+   "group": "Monsters",
+   "flavor": "The Dahn slumber, but they do not sleep soundly. Where a Dahn stirs, its power spills into the world and takes shape for a time: storms that walk, stone that rises, fire with a will. Elementals are fragments of the first six Dahn. Soul Rifting can call lesser ones (GM's call), and greater ones gather wherever a Dahn's power runs strong."
   }
  },
  "rules": [
@@ -354,6 +422,37 @@ window.CODEX_DATA = {
     [
      "Speech",
      "How well a character forms words. Players say what they want; the roll decides how well it lands."
+    ]
+   ]
+  },
+  {
+   "id": "checks",
+   "title": "Making Checks",
+   "group": "Character",
+   "entries": [
+    [
+     "The check",
+     "Roll D10 and add the stat that fits the action, plus any bonuses from skills, perks, traits or items. Meet or beat the difficulty to succeed. The GM names the stat and the difficulty."
+    ],
+    [
+     "Difficulty",
+     "Easy 4, Moderate 6, Hard 8, Very Hard 10, Heroic 12+."
+    ],
+    [
+     "Natural rolls",
+     "A natural 1 always fails. A natural 10 always succeeds on anything the GM has ruled possible."
+    ],
+    [
+     "Helping",
+     "One ally who could reasonably help gives +2. They must describe how they help."
+    ],
+    [
+     "Trying again",
+     "A failed check can be retried only when something changes: more time, a better tool, a new approach, or a different character."
+    ],
+    [
+     "Group rolls",
+     "If a group can logically all take part in a roll to overcome a threshold, a group roll may be made. Each participating character rolls, and the group succeeds if at least half of them succeed. Group-roll bonuses (Druna, Team Oriented) add to every participant's roll."
     ]
    ]
   },
@@ -403,7 +502,7 @@ window.CODEX_DATA = {
     ],
     [
      "Enemy XP",
-     "Role multiplier × (20 + 6 × level). Minion ×0.25, Standard ×1, Elite ×3, Boss ×10. Split evenly across the party."
+     "Role multiplier × (20 + 6 × level), rounded with halves up. Minion ×0.25, Standard ×1, Elite ×3, Boss ×10. Split evenly across the party."
     ],
     [
      "Outside combat",
@@ -480,7 +579,7 @@ window.CODEX_DATA = {
     ],
     [
      "Pairs",
-     "Two cards of the same rarity play as one card a rarity higher (two Legendaries make a Mythic)."
+     "Two cards of the same rarity play as one card a rarity higher (two Legendaries make a Mythic). A paired card may itself be paired: two Epics make a Legendary, and that with the joker makes a Mythic."
     ],
     [
      "Re-Evaluate",
@@ -500,7 +599,7 @@ window.CODEX_DATA = {
     ],
     [
      "Between fights",
-     "The deck lasts until a full rest. A breather recovers 8 cards from the discard once per day. A full rest reshuffles everything."
+     "The deck lasts until a full rest. A breather recovers 8 cards from the discard once per day. A full rest reshuffles everything. After a fight you may discard cards from your hand; if combat begins again shortly, draw back to 3, otherwise keep one card and discard the rest."
     ],
     [
      "Outside combat",
@@ -515,7 +614,7 @@ window.CODEX_DATA = {
    "entries": [
     [
      "Damage modifier",
-     "Strength, Agility, or Knowledge added to every die: +½ per D4 or D6, +1 per D8 to D12, +2 per D20. An attack bonus is a damage modifier."
+     "Strength, Agility, or Knowledge added to every die: +½ per D4 or D6, +1 per D8 to D12, +2 per D20. Add the half-modifiers for every D4 and D6 in a strike together, then round down. An attack bonus is a damage modifier: there is no roll to hit in melee, and an attack bonus adds damage."
     ],
     [
      "Weapon tier",
@@ -524,6 +623,10 @@ window.CODEX_DATA = {
     [
      "Natural 1s",
      "A strike with several dice only fails if every die rolls a 1."
+    ],
+    [
+     "Spell accuracy",
+     "Spells hit automatically within their listed range unless the ability says otherwise. Targets may still dodge or block them."
     ],
     [
      "Thresholds",
@@ -594,7 +697,7 @@ window.CODEX_DATA = {
     ],
     [
      "Condition",
-     "Weapons and armor break at Condition 0."
+     "Weapons and armor break at Condition 0. Weapons start at 12 + 3 per material tier, shields at 14 + 3, armor sets at 10 + 3. Dwarven metals and Pitch have +50%; Mag-Glass and PriGlass -50% (see the Condition table)."
     ]
    ]
   },
@@ -609,7 +712,7 @@ window.CODEX_DATA = {
     ],
     [
      "Frozen",
-     "At 3+ an entity is Chilled: no Defensive abilities, and Quick abilities only as Standard on its own turn. More frozen stacks than its level: frozen solid until it recovers."
+     "At 3+ stacks, or at stacks equal to its level if that is lower, an entity is Chilled: no Defensive abilities, and Quick abilities only as Standard on its own turn. More frozen stacks than its level: frozen solid until it recovers."
     ],
     [
      "Paralysis",
@@ -807,7 +910,7 @@ window.CODEX_DATA = {
     ],
     [
      "Prices",
-     "Meal about 1, inn night about 3, laborer's day about 5, horse about 150. Iron sword 55; PriSteel sword 8,000."
+     "Meal about 1, inn night about 3, laborer's day about 5, horse about 150. Weapon, armor and ammunition prices roughly double per material tier: an Iron sword is 55, a PriSteel sword 8,000 (see the Prices table)."
     ],
     [
      "Selling",
@@ -861,7 +964,7 @@ window.CODEX_DATA = {
    {
     "rarity": "Mythic",
     "cards": 0,
-    "mapping": "Two Legendaries paired",
+    "mapping": "Two Legendaries paired (a paired card can itself be paired)",
     "pip": "✦"
    }
   ],
@@ -939,88 +1042,6 @@ window.CODEX_DATA = {
     "Epic",
     "5 SE",
     "Finishing a story arc"
-   ]
-  ],
-  "materials": [
-   [
-    0,
-    "Oak",
-    "Wood for bows, shields, staves, and spear shafts. Light and cheap."
-   ],
-   [
-    0,
-    "Bronze",
-    "Soft and easy to work; the first metal most smiths learn."
-   ],
-   [
-    0,
-    "Iron",
-    "The common standard for tools, weapons, and armor everywhere."
-   ],
-   [
-    1,
-    "Steel",
-    "Refined iron: reliable, and the mark of a real professional."
-   ],
-   [
-    1,
-    "D-Iron",
-    "Dwarven iron: denser and far more durable than common iron."
-   ],
-   [
-    1,
-    "Silv-Steel",
-    "Silvered steel. Weaker than plain steel, but deals 50% more damage to shapeshifters such as werewolves."
-   ],
-   [
-    2,
-    "D-Steel",
-    "Dwarven steel: the dwarves' finest common alloy, and the toughest Tier 2 metal."
-   ],
-   [
-    2,
-    "Etherian",
-    "A dark-elf alloy from Etriun: light and quiet."
-   ],
-   [
-    2,
-    "Lyran Stone",
-    "River stone from Lyra's Well, shaped and hardened by Lyros craftsmen."
-   ],
-   [
-    3,
-    "Glacius",
-    "Frost-forged metal from the north; always cold to the touch."
-   ],
-   [
-    3,
-    "Aurausheen",
-    "The golden light-metal of the Imperios, said to carry Aurau's blessing."
-   ],
-   [
-    4,
-    "Mag-Glass",
-    "Glass grown through with magic. Fragile, but it carries enchantments well."
-   ],
-   [
-    4,
-    "Druiniun",
-    "A sea metal from the Isles of Drune that never rusts."
-   ],
-   [
-    5,
-    "Pitch",
-    "Black volcanic metal from the Ashlands: very heavy and very hard."
-   ],
-   [
-    6,
-    "PriGlass",
-    "Primordial glass. Fragile, but saturated with primordial power."
-   ],
-   [
-    7,
-    "PriSteel",
-    "Primordial steel, the strongest material known."
    ]
   ],
   "consumables": [
@@ -1195,6 +1216,171 @@ window.CODEX_DATA = {
     "Passive",
     "Holds 5 soul shards per rank."
    ]
-  ]
+  ],
+  "prices": {
+   "columns": [
+    "Item",
+    "T0",
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6",
+    "T7"
+   ],
+   "rows": [
+    [
+     "Dagger",
+     30,
+     60,
+     120,
+     260,
+     510,
+     1050,
+     2150,
+     4350
+    ],
+    [
+     "Spear",
+     35,
+     70,
+     140,
+     300,
+     600,
+     1200,
+     2500,
+     5100
+    ],
+    [
+     "Shield",
+     45,
+     90,
+     180,
+     380,
+     760,
+     1600,
+     3250,
+     6500
+    ],
+    [
+     "One Handed Axe, Mace, Bow",
+     50,
+     100,
+     200,
+     420,
+     850,
+     1750,
+     3600,
+     7250
+    ],
+    [
+     "Sword",
+     55,
+     110,
+     220,
+     470,
+     940,
+     1900,
+     3950,
+     8000
+    ],
+    [
+     "Battle Axe",
+     80,
+     160,
+     320,
+     680,
+     1350,
+     2800,
+     5750,
+     11600
+    ],
+    [
+     "Crossbow",
+     85,
+     170,
+     340,
+     720,
+     1450,
+     3000,
+     6100,
+     12300
+    ],
+    [
+     "Greatsword, Warhammer",
+     90,
+     180,
+     360,
+     760,
+     1550,
+     3150,
+     6500,
+     13050
+    ],
+    [
+     "Light armor (full set)",
+     40,
+     80,
+     160,
+     340,
+     680,
+     1400,
+     2900,
+     5800
+    ],
+    [
+     "Heavy armor (full set)",
+     120,
+     240,
+     480,
+     1000,
+     2050,
+     4200,
+     8650,
+     17400
+    ],
+    [
+     "Arrows or bolts (20)",
+     5,
+     10,
+     20,
+     40,
+     85,
+     180,
+     360,
+     720
+    ]
+   ],
+   "note": "Marks. Silv-Steel costs the same as Steel. Crafting materials are about 40% of these prices."
+  },
+  "condition": {
+   "columns": [
+    "Item",
+    "Condition"
+   ],
+   "rows": [
+    [
+     "Weapon",
+     "12 + 3 per material tier"
+    ],
+    [
+     "Shield",
+     "14 + 3 per material tier"
+    ],
+    [
+     "Armor (set)",
+     "10 + 3 per material tier"
+    ],
+    [
+     "Dwarven metals (D-Iron, D-Steel) and Pitch",
+     "+50% Condition"
+    ],
+    [
+     "Mag-Glass and PriGlass",
+     "-50% Condition"
+    ]
+   ]
+  }
  }
 };

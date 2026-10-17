@@ -39,6 +39,13 @@ const id = r => g4.cards.find(c => c.rar === r && c.r !== 'JK').id;
 check(K.combo(g4, [id('Basic'), id('Basic')]) === 'Common', 'pair of Basics plays as Common');
 check(K.combo(g4, [id('Common'), id('Common'), id('Common')]) === 'Rare', 'three Commons play as Rare');
 check(K.combo(g4, [id('Basic'), id('Common')]) === null, 'mixed rarities do not pair');
+// A paired card may itself be paired (2026-10-17).
+check(K.pairUp(b0, [b0.cards.find(c => c.rar === 'Epic').id, b0.cards.filter(c => c.rar === 'Epic')[1].id, 'JK1']) === 'Mythic', 'two Epics pair to Legendary, which pairs with the joker to Mythic');
+const bas = b0.cards.filter(c => c.rar === 'Basic').map(c => c.id), com = b0.cards.find(c => c.rar === 'Common').id;
+check(K.pairUp(b0, [bas[0], bas[1], com]) === 'Uncommon', 'two Basics and a Common pair up to Uncommon');
+check(K.pairUp(b0, [bas[0], bas[1], bas[2]]) === null, 'three of one rarity do not chain (that is Three of a Kind)');
+check(K.pairUp(b0, [bas[0], bas[1]]) === 'Common', 'a plain pair still plays one rarity up');
+check(K.pairUp(g4, ['JK1', id('Rare'), id('Epic')]) === 'Legendary', 'a wild joker can complete a chained pair');
 check(K.combo(g4, ['JK1', id('Rare')]) === 'Epic', 'a wild joker matches the other card');
 check(K.combo(g4, ['JK1', 'JK2']) === 'Mythic', 'two wild jokers pair to Mythic');
 check(K.value(g4, 'JK1') === 'Mythic', 'House Rules: a wild joker pays as Mythic');

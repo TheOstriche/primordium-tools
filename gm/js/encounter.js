@@ -68,7 +68,11 @@
     const avgLevel = party.length ? party.reduce((t, p) => t + (Number(p.level) || 1), 0) / party.length : null;
     const step = avgLevel != null ? Rules.levelToStep(Math.round(avgLevel)) : null;
     const diff = step != null && groups.length ? Rules.encounterDifficulty(step, party.length, groups) : null;
-    return { party, xp, avgLevel, step, diff, notes };
+    // The Game Master's Guide budget, in Standard Encounters per player.
+    const foes = enc.enemies.map(r => ({ npc: GameData.find(r.npcName), count: r.count })).filter(r => r.npc)
+      .map(r => ({ role: r.npc.role, level: r.npc.level, count: r.count }));
+    const se = avgLevel != null && foes.length ? Rules.encounterSE(Math.round(avgLevel), party.length, foes) : null;
+    return { party, xp, avgLevel, step, diff, se, notes };
   }
 
   // ---------- Drawing ----------
@@ -151,7 +155,11 @@
         h('div.big-stat', h('span.label', 'Total XP'), h('span.value', fmt(sm.xp, 1)),
           sm.party.length ? h('span.sub', fmt(sm.xp / sm.party.length, 1) + ' each') : null),
         h('div.big-stat', h('span.label', 'Rounds to clear'),
-          h('span.value', sm.diff ? sm.diff.roundsToClear.toFixed(1) : '—'))),
+          h('span.value', sm.diff ? sm.diff.roundsToClear.toFixed(1) : '—')),
+        h('div.big-stat', { title: "Game Master's Guide budget: Easy 0.5, Standard 1, Hard 1.5, Deadly 2+ SE per player" },
+          h('span.label', 'Budget'),
+          h('span.value' + (sm.se ? '.band-' + sm.se.band.toLowerCase() : ''), sm.se ? fmt(sm.se.perPlayer, 2) + ' SE' : '—'),
+          sm.se ? h('span.sub', 'per player · ' + sm.se.band) : null)),
       sm.party.length
         ? h('p.muted.small', sm.party.length + (sm.party.length === 1 ? ' player' : ' players') + ', average level ' + fmt(sm.avgLevel, 1) +
             ' (step ' + sm.step + ', ' + stepInfo.stage + '). Estimate uses reference players at this step: ' +

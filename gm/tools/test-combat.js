@@ -197,5 +197,27 @@ eq('path tier: path basic attack replaces Tier 0', [legateList.some(a => a.name 
 const pick = C.chooseAbility(c4, c4.combatants[1], find('Military Legate'), 1, legateList);
 eq('tactics roll picks from the skill list', pick.ability && pick.ability.name, "Duelist's Strike");
 
+// ---------- Boss Resolve (rules.md, Bosses; ruling 2026-10-17) ----------
+const br = C.fromEncounter({ id: 'br', name: 'Resolve', partyIds: [], enemies: [{ npcName: 'Clockwork Titan', count: 1 }, { npcName: 'Wolf', count: 1 }] }, []);
+C.begin(br);
+const boss = br.combatants.find(c => c.role === 'Boss'), wolf = br.combatants.find(c => c.name === 'Wolf');
+while (C.activeEntry(br).cid !== boss.id) C.nextTurn(br);
+boss.conditions = ['Disoriented'];
+C.addStacks(boss, 'Frozen', boss.level + 1);
+const resolveOpts = C.resolveOptions(br, boss);
+eq('Boss Resolve offers each condition and control effect on its turn', resolveOpts.map(o => o.name), ['Disoriented', 'Frozen solid']);
+eq('a non-Boss gets no Boss Resolve', C.resolveOptions(br, wolf), []);
+C.useResolve(br, boss, resolveOpts.find(o => o.name === 'Frozen solid'));
+eq('Boss Resolve: frozen solid ends this turn, the stacks stay', [C.stackEffects(boss, br).some(e => e.severe), boss.stacks.Frozen.n], [false, boss.level + 1]);
+eq('Boss Resolve is once per turn', C.resolveOptions(br, boss), []);
+C.nextTurn(br);
+while (C.activeEntry(br) && C.activeEntry(br).cid !== boss.id) C.nextTurn(br);
+eq("the Boss's second turn offers it again", C.resolveOptions(br, boss).map(o => o.name), ['Disoriented', 'Frozen solid']);
+C.useResolve(br, boss, { kind: 'condition', name: 'Disoriented' });
+eq('Boss Resolve on a condition removes it', boss.conditions, []);
+
+// Chilled at 3 frozen stacks, or the level if lower (2026-10-17).
+eq('a level 1 creature is Chilled at 1 frozen stack', C.stackEffects({ level: 1, stacks: { Frozen: { n: 1, target: 4 } } }).some(e => /^Chilled/.test(e.text)), true);
+
 console.log(failed ? '\n' + failed + ' check(s) failed' : '\nAll checks passed');
 process.exit(failed ? 1 : 0);

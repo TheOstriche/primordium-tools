@@ -397,6 +397,7 @@
         isActive ? h('span.tag.big', 'Their turn') : null),
       hpBlock(cb, c, npc),
       npc ? [
+        resolveSection(cb, c),
         attackSection(cb, c, npc, isActive),
         npcStats(c, npc),
         stacksSection(cb, c, isActive),
@@ -734,7 +735,7 @@
 
   function stacksSection(cb, c, isActive) {
     const types = Object.keys(c.stacks);
-    const effects = Combat.stackEffects(c);
+    const effects = Combat.stackEffects(c, cb);
     const pick = h('select.small', { 'aria-label': 'Stack type' }, Combat.STACK_TYPES.map(t => h('option', { value: t }, t)));
     return h('div.section',
       h('div.card-head', h('h3', 'Stacks'),
@@ -766,6 +767,18 @@
             toast(c.name + ': Knowledge check needs ' + (d + n) + '+ (D10 ' + d + ' + ' + n + ').');
           }
         }, 'Roll target') : null)));
+  }
+
+  // Boss Resolve: on the Boss's turn, end one condition, or act despite being frozen solid or paralyzed.
+  function resolveSection(cb, c) {
+    const options = Combat.resolveOptions(cb, c);
+    if (!options.length) return null;
+    return h('div.section.resolve',
+      h('h3', 'Boss Resolve'),
+      h('p.small.muted', 'At the start of its turn a Boss may end one condition or control effect on itself. Stacks stay.'),
+      h('div.chips', options.map(o => h('button.toggle', {
+        onclick: () => act(() => Combat.useResolve(cb, c, o))
+      }, 'End ' + o.name.toLowerCase()))));
   }
 
   function effectsSection(cb, c) {

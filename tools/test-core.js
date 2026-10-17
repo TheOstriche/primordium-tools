@@ -15,7 +15,8 @@ for (const t of C.TACTICS) {
 check(C.rarityForRoll('Good', 19) === 'Rare' && C.rarityForRoll('Mythic', 20) === 'Mythic', 'spot checks: Good 19 is Rare, Mythic 20 is Mythic');
 
 // XP (NPC Guide): role x (20 + 6 x level); the next level needs 25 more than the last.
-check(C.xpFor('Standard', 5) === 50 && C.xpFor('Boss', 5) === 500 && C.xpFor('Minion', 1) === 6.5, 'enemy XP by role and level');
+check(C.xpFor('Standard', 5) === 50 && C.xpFor('Boss', 5) === 500 && C.xpFor('Minion', 1) === 7 && C.xpFor('Minion', 3) === 10, 'enemy XP by role and level, halves rounded up');
+check(C.chilledAt(1) === 1 && C.chilledAt(2) === 2 && C.chilledAt(3) === 3 && C.chilledAt(9) === 3, 'Chilled at 3 frozen stacks, or the level if lower');
 check(C.xpToNextLevel(1) === 100 && C.xpToNextLevel(3) === 150, 'XP to the next level: 100, then 25 more each level');
 
 // Recovery: damaging stacks lose 3 or half (rounded up), others half; never more than they have.

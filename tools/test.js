@@ -6,6 +6,7 @@ const root = path.join(__dirname, '..');
 
 const suites = [
   ['Shared core (rule tables, helpers)', 'node', ['tools/test-core.js']],
+  ['Stored data (names, values, cross-links)', 'node', ['tools/test-data.js']],
   ['Tactical deck', 'node', ['tools/test-deck.js']],
   ['GM game math', 'node', ['gm/tools/test-rules.js']],
   ['GM combat rules', 'node', ['gm/tools/test-combat.js']],

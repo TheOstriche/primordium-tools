@@ -77,7 +77,7 @@ label.check input { width: 16px; height: 16px; accent-color: var(--glow); }
 .enc-layout { display: grid; grid-template-columns: minmax(380px, 5fr) 7fr; gap: 16px; align-items: start; }
 .enc-right { position: sticky; top: 70px; max-height: calc(100vh - 90px); display: flex; flex-direction: column; }
 
-.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .big-stat { display: flex; flex-direction: column; }
 .big-stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); }
 .big-stat .value { font: 30px var(--f-display); line-height: 1.2; }
@@ -261,6 +261,7 @@ button.small { font-size: 12px; padding: 2px 8px; }
 .status { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--danger); border-radius: var(--radius); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .status p { margin: 4px 0; }
 .reminder { background: color-mix(in srgb, var(--warn) 12%, transparent); border: 1px solid var(--warn); border-radius: var(--radius); padding: 6px 10px; font-size: 13px; }
+.section.resolve { border-top-color: var(--gilt); }
 .attack.live { background: color-mix(in srgb, var(--glow) 8%, transparent); margin: 0 -14px; padding: 10px 14px; border-top-color: var(--glow); }
 .ability-list { display: flex; flex-direction: column; gap: 3px; margin: 6px 0; }
 .ability-btn { display: grid; grid-template-columns: 86px 1fr auto; gap: 8px; align-items: center; text-align: left; padding: 5px 8px; }

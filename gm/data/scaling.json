@@ -612,12 +612,26 @@
     }
   },
   "xp": {
-    "formula": "role.xpMultiplier * (20 + 6 * enemyLevel)"
+    "formula": "round(role.xpMultiplier * (20 + 6 * enemyLevel)), halves up"
   },
   "difficultyBands": {
     "Easy": 0.15,
     "Standard": 0.35,
     "Hard": 0.6,
     "note": "share of total party HP lost; above Hard = Deadly"
+  },
+  "encounterBudgets": {
+    "seValue": {
+      "Minion": 0.25,
+      "Standard": 1,
+      "Elite": 3,
+      "Boss": 10
+    },
+    "perPlayer": {
+      "Easy": 0.5,
+      "Standard": 1,
+      "Hard": 1.5,
+      "Deadly": 2
+    }
   }
 }

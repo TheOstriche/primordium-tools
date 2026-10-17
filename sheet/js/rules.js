@@ -39,7 +39,7 @@ function totals(c) {
     const k = n(a.count);
     if (a.cat === 'stack' && a.type === 'Frozen') {
       if (k > L) notes.push('Frozen solid: no actions until you recover');
-      else if (k >= 3) notes.push('Chilled: no Defensive abilities; Quick abilities only as Standard on your turn');
+      else if (k >= Core.chilledAt(L)) notes.push('Chilled: no Defensive abilities; Quick abilities only as Standard on your turn');
     }
     if (a.cat === 'stack' && a.type === 'Paralysis' && k > L) notes.push('Paralyzed: no actions until you recover');
     if (a.cat === 'stack' && ['Calm', 'Anger', 'Fear'].includes(a.type) && k > L / 2) {

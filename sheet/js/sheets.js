@@ -63,7 +63,7 @@ function itemSheet(id) {
   const weaponFields = `<label class="field"><span>Weapon type</span><select name="wtype">${LISTS.weapons.map(v => opt(v, it.wtype)).join('')}</select></label>`;
   const common = `<div class="row2">
       <label class="field"><span>Material (sets tier)</span><select name="material" id="matPick"><option value="">Choose</option>
-        ${LISTS.materials.map(([m, t]) => `<option value="${m}" data-tier="${t}" ${m === it.material ? 'selected' : ''}>${m} (Tier ${t})</option>`).join('')}</select></label>
+        ${Core.MATERIALS.map(([t, m]) => `<option value="${m}" data-tier="${t}" ${m === it.material ? 'selected' : ''}>${m} (Tier ${t})</option>`).join('')}</select></label>
       ${input('Tier', 'tier', it.tier ?? 0, num + ' id="tierBox"')}</div>
     <div class="row2">${k === 'armor' ? input('Armor value', 'armor', it.armor, num + ' placeholder="Shield: leave blank"') : input('AP', 'ap', it.ap, num)}${input('Condition', 'cond', it.cond, num)}</div>
     ${input('Enchantments or special effects', 'special', it.special || '', 'placeholder="For example Flame Brand, rank 1"')}

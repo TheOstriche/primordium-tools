@@ -48,12 +48,14 @@
       const stat = text.match(/Damage stat:\s*(\d+)/i);
       const wt = text.match(/Weapon tier:\s*(\d+)/i);
       const isPath = tier && /path/i.test(tier[1]);
+      const named = text.match(/\(([A-Z][\w ]*?)(?:'s)? Path\)/);   // "Battle Axe (Executioner's Path)"
       const s = {
         skill: '', path: '',
         baseTier: tier ? (isPath ? 4 : +tier[2]) : 1,
         pathTier: isPath ? +tier[2] : 0,
         stat: stat ? +stat[1] : 2,
         weaponTier: wt ? +wt[1] : 0,
+        wantPath: named ? named[1] : '',   // the path the stat block names, used once its skill is chosen
         options: optionsFromText(text)
       };
       Object.assign(s, JSON.parse(JSON.stringify(npc.skillSetup || {})));
@@ -67,7 +69,7 @@
       const d = byName[s.skill];
       const paths = d ? Object.keys(d.paths || {}) : [];
       if (!s.pathTier) s.path = '';
-      else if (!paths.includes(s.path)) s.path = paths[0] || '';
+      else if (!paths.includes(s.path)) s.path = paths.includes(s.wantPath) ? s.wantPath : paths[0] || '';
       return s;
     }
 

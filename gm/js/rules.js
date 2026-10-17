@@ -12,7 +12,7 @@
 
     function xpFor(role, level) {
       const r = S.roles[role];
-      return r ? r.xpMultiplier * (20 + 6 * level) : 0;
+      return r ? Math.floor(r.xpMultiplier * (20 + 6 * level) + 0.5) : 0;   // halves up (2026-10-17)
     }
 
     // Reference player damage per turn against a given armor value (scaling.md section 3).
@@ -112,6 +112,17 @@
       };
     }
 
+    // Encounter budget in Standard Encounters (rules.md, Encounter building; Game Master's Guide 2.0).
+    // enemies: [{ role, level, count }]. Each counts its role value, scaled by its level against the party's.
+    // band: Easy under 1 SE per player, Standard from 1, Hard from 1.5, Deadly from 2.
+    function encounterSE(partyLevel, partySize, enemies) {
+      const B = S.encounterBudgets, scale = lv => (20 + 6 * lv) / (20 + 6 * partyLevel);
+      const total = enemies.reduce((t, e) => t + (B.seValue[e.role] || 0) * scale(e.level) * e.count, 0);
+      const perPlayer = total / Math.max(1, partySize), P = B.perPlayer;
+      const band = perPlayer >= P.Deadly ? 'Deadly' : perPlayer >= P.Hard ? 'Hard' : perPlayer >= P.Standard ? 'Standard' : 'Easy';
+      return { total, perPlayer, band };
+    }
+
     // Suggested stats for a new creature (scaling.md section 4 budget formulas).
     function suggestStats(role, level, armorClass, tactics) {
       const s = levelToStep(level);
@@ -140,15 +151,16 @@
       const atk = { strikes: +m[1], dice: m[2] ? +m[2] : 1, sides: +m[3], flat: m[4] ? +m[4] : 0 };
       const ap = String(text).match(/(\d+)\s*AP\b/);
       if (ap) atk.ap = +ap[1];
-      if (/\bto (all|every|a \d+(\.\d+)?M|up to \d+ targets)|\bto an? \d+ degree|\barc\b|\bline\b/i.test(text)) atk.area = true;
-      if (/ignor\w*\s+(all\s+)?armou?r/i.test(text)) atk.ignoreArmor = true;
+      if (/\bto (all|every|a \d+(\.\d+)?M)|\bup to \d+ (targets|enemies)|\beach against a different target|\bto an? \d+ degree|\barc\b|\bline\b/i.test(text)) atk.area = true;
+      // Psychic damage ignores armor (rules.md, Damage types).
+      if (/ignor\w*\s+(all\s+)?armou?r|\bpsychic damage/i.test(text)) atk.ignoreArmor = true;
       return atk;
     }
 
     return {
       RARITIES, levelToStep, xpFor, playerDptVsArmor, attackAverage,
       rarityForRoll, estimateDamagePerTurn, budgetFor, combatProfile,
-      difficultyBand, encounterDifficulty, stepInfo: step, suggestStats, parseAttackText
+      difficultyBand, encounterDifficulty, encounterSE, stepInfo: step, suggestStats, parseAttackText
     };
   }
 

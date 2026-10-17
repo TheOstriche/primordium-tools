@@ -65,7 +65,7 @@ class NpcParser(unittest.TestCase):
         w = self.npcs["wolf"]
         self.assertEqual(w["stats"], {"STR": 0, "AGI": 2, "KNO": -5, "SPD": 5, "PER": 3, "SPE": -5})
         self.assertEqual(w["hp"], 11)
-        self.assertEqual(w["xp"], 6)
+        self.assertEqual(w["xp"], 7)  # halves round up (2026-10-17)
         self.assertEqual(w["family"], "Wolves")
         self.assertTrue(w["familyFlavor"].startswith("Wolves are"))
 

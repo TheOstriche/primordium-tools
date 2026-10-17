@@ -19,7 +19,7 @@ Everything more than one app needs lives here, once. Each file sets one global (
 |---|---|---|---|
 | `core.js` (*Node*) | `PrimordiumCore` | The game's rule tables and small helpers: rarities, stats, the D20 tactics table, cooldowns, roles and XP, stacks and recovery, movement; `esc`, `slug`, `signed`, `plural`. | all |
 | `primordium-data.js` | `PRIMORDIUM_DATA` | Every skill (tiers, paths, abilities, perks), race stats and specials, background traits. Generated from the owner's working sheets. | all |
-| `npc-data.js` | `PRIMORDIUM_NPCS` | All 97 creatures from the NPC Guide. | Codex, GM |
+| `npc-data.js` | `PRIMORDIUM_NPCS` | Every creature from the NPC Guide (165 in 38 families). | Codex, GM |
 | `character-rules.js` | `PrimordiumCharacter` | What a character's skills grant, and their stats, max HP, and armor. The sheet shows these; the GM tool imports sheet backups with the same code, so the two always agree. | sheet, GM |
 | `tactics-deck.js` | `PrimordiumDeck` | The tactical deck: builds the 52 cards and jokers from a Tactics level, runs a hand with every Tactics mechanic, and draws it (its HTML is shared too). | sheet, Codex |
 | `dice.js` | `PrimordiumDice` | Rolling `2D6+3`-style expressions, and the dice tray buttons. | sheet, Codex |
@@ -81,4 +81,5 @@ All apps are on one site, so they share browser storage. Each uses its own keys:
 - **A phone app's files (or anything in `shared/` it loads):** raise the version in its `sw.js` and keep the file list there matching what its `index.html` loads, so installed phones update.
 - **A new screen or button:** follow the app's pattern: a view function in `views.js`, a `data-*` attribute on the button, an entry in `TAPS` in `app.js`.
 - **New colors or components:** add tokens or components to `shared/theme.css` if more than one app could use them.
-- **Tests:** `node tools/test.js` runs every suite (shared core, tactical deck, GM game math, GM combat rules, and the Codex guide parser if Python is installed). Then try the apps with `node tools/serve.js` at http://localhost:8080 on a phone-sized window, in light and dark.
+- **Tests:** `node tools/test.js` runs every suite (shared core, stored data, tactical deck, GM game math, GM combat rules, and the Codex guide parser if Python is installed). `tools/test-data.js` checks the data files agree with each other and that every perk the code reads by name (from `tools/lib/data-links.js`) still exists.
+- **Handoffs:** `node tools/export-handoffs.js` writes `exports/handoff/`, one Markdown file per kind of stored data (format, rules, current contents, how to bring a change in), for a Claude project. Run it again after any data change. Then try the apps with `node tools/serve.js` at http://localhost:8080 on a phone-sized window, in light and dark.

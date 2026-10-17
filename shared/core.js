@@ -40,13 +40,18 @@
   /* ---------- creatures and XP ---------- */
   const ROLES = ['Minion', 'Standard', 'Elite', 'Boss'];
   const ROLE_XP = { Minion: 0.25, Standard: 1, Elite: 3, Boss: 10 };   // matches gm/data/scaling.json
-  const xpFor = (role, level) => (ROLE_XP[role] || 0) * (20 + 6 * (Number(level) || 0));
+  // Enemy XP: role multiplier × (20 + 6 × level), rounded with halves up (owner, 2026-10-17: 6.5 → 7).
+  const roundHalfUp = x => Math.floor(x + 0.5);
+  const xpFor = (role, level) => roundHalfUp((ROLE_XP[role] || 0) * (20 + 6 * (Number(level) || 0)));
   const xpToNextLevel = level => 100 + 25 * (Math.max(1, Number(level) || 1) - 1);
   const SIZES = ['Tiny', 'Small', 'Average', 'Large', 'Huge', 'Massive'];
 
   /* ---------- stacks and recovery ---------- */
   const STACKS = ['Bleed', 'Flame', 'Poison', 'Acid', 'Frozen', 'Static', 'Paralysis', 'Calm', 'Anger', 'Fear'];
   const DAMAGING_STACKS = ['Bleed', 'Flame', 'Poison', 'Acid'];   // 1D4 each at the end of the phase
+  // Frozen: Chilled at 3 stacks, or at stacks equal to the entity's level if that is lower (2026-10-17);
+  // frozen solid at more stacks than its level.
+  const chilledAt = level => Math.min(3, Math.max(1, Number(level) || 1));
   const RECOVERY_START = 4, RECOVERY_FLOOR = 2;                    // D4 target after a new stack, and its lowest
   // Stacks a successful recovery removes: damaging stacks lose 3 or half (whichever is more), others half.
   // Halves round up (GM ruling).
@@ -57,6 +62,27 @@
 
   /* ---------- movement ---------- */
   const movement = speed => Math.max(2, 5 + (Number(speed) || 0));   // meters (1 square = 1M)
+
+  /* ---------- materials ---------- */
+  // [item tier, material, notes]: an item made of a material has its tier (Game Guide 2.0, Crafting).
+  const MATERIALS = [
+    [0,"Oak","Wood for bows, shields, staves, and spear shafts. Light and cheap."],
+    [0,"Bronze","Soft and easy to work; the first metal most smiths learn."],
+    [0,"Iron","The common standard for tools, weapons, and armor everywhere."],
+    [1,"Steel","Refined iron: reliable, and the mark of a real professional."],
+    [1,"D-Iron","Dwarven iron: denser and far more durable than common iron."],
+    [1,"Silv-Steel","Silvered steel. Weaker than plain steel, but deals 50% more damage to shapeshifters such as werewolves."],
+    [2,"D-Steel","Dwarven steel: the dwarves' finest common alloy, and the toughest Tier 2 metal."],
+    [2,"Etherian","A dark-elf alloy from Etriun: light and quiet."],
+    [2,"Lyran Stone","River stone from Lyra's Well, shaped and hardened by Lyros craftsmen."],
+    [3,"Glacius","Frost-forged metal from the north; always cold to the touch."],
+    [3,"Aurausheen","The golden light-metal of the Imperios, said to carry Aurau's blessing."],
+    [4,"Mag-Glass","Glass grown through with magic. Fragile, but it carries enchantments well."],
+    [4,"Druiniun","A sea metal from the Isles of Drune that never rusts."],
+    [5,"Pitch","Black volcanic metal from the Ashlands: very heavy and very hard."],
+    [6,"PriGlass","Primordial glass. Fragile, but saturated with primordial power."],
+    [7,"PriSteel","Primordial steel, the strongest material known."]
+  ];
 
   /* ---------- text helpers ---------- */
   const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -70,7 +96,7 @@
     RARITIES, rarityIndex, rarityStep, STATS, STAT_NAMES, STAT_KEYS,
     TACTICS, TACTICS_TABLE, rarityForRoll, reachableRarities, COOLDOWNS, cooldownText,
     ROLES, ROLE_XP, xpFor, xpToNextLevel, SIZES,
-    STACKS, DAMAGING_STACKS, RECOVERY_START, RECOVERY_FLOOR, recoveryLoss, movement,
+    STACKS, DAMAGING_STACKS, chilledAt, RECOVERY_START, RECOVERY_FLOOR, recoveryLoss, movement, MATERIALS,
     esc, slug, signed, article, plural
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Core;

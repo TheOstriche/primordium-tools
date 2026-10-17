@@ -8,7 +8,7 @@
   const STACK_TYPES = Core.STACKS;
   const DAMAGING_STACKS = Core.DAMAGING_STACKS;
   // Conditions the GM can mark on a creature. Calmed, Enraged, and Terrified follow from Calm, Anger, and Fear stacks.
-  const CONDITIONS = ['Disoriented', 'Calmed', 'Enraged', 'Terrified'];
+  const CONDITIONS = ['Disoriented', 'Silenced', 'Immobilized', 'Calmed', 'Enraged', 'Terrified'];
   // Squares a creature covers: [wide, tall]. Tiny and Small share a square.
   const FOOTPRINT = { Tiny: [1, 1], Small: [1, 1], Average: [1, 1], Large: [2, 1], Huge: [2, 2], Massive: [3, 3] };
   const DEFAULT_COOLDOWN = Core.COOLDOWNS;
@@ -295,19 +295,38 @@
       return { roll: r, target: s.target, success, lost, left: c.stacks[type] ? c.stacks[type].n : 0 };
     }
 
-    // States that follow from stacks, for display.
-    function stackEffects(c) {
+    // States that follow from stacks, for display. With the combat given, a state a Boss ended this turn
+    // with Boss Resolve shows as ended.
+    function stackEffects(c, combat) {
       const out = [];
       const n = t => (c.stacks[t] ? c.stacks[t].n : 0);
       const lvl = c.level || 1;
-      if (n('Frozen') > lvl) out.push({ text: 'Frozen solid: no actions', severe: true });
-      else if (n('Frozen') >= 3) out.push({ text: 'Chilled: no Defensive; Quick only as Standard' });
-      if (n('Paralysis') > lvl) out.push({ text: 'Paralyzed: no actions', severe: true });
+      const ended = state => combat && c.resolve && c.resolve.key === turnKey(combat) && c.resolve.state === state;
+      if (n('Frozen') > lvl) out.push(ended('Frozen solid') ? { text: 'Frozen solid, ended this turn by Boss Resolve (stacks stay)' } : { text: 'Frozen solid: no actions', severe: true, state: 'Frozen solid' });
+      else if (n('Frozen') >= Core.chilledAt(lvl)) out.push({ text: 'Chilled: no Defensive; Quick only as Standard' });
+      if (n('Paralysis') > lvl) out.push(ended('Paralyzed') ? { text: 'Paralyzed, ended this turn by Boss Resolve (stacks stay)' } : { text: 'Paralyzed: no actions', severe: true, state: 'Paralyzed' });
       else if (n('Paralysis')) out.push({ text: '-' + n('Paralysis') + ' Strength and Agility' });
       for (const [t, state] of [['Calm', 'calmed'], ['Anger', 'enraged'], ['Fear', 'terrified']]) {
         if (n(t) > lvl / 2) out.push({ text: 'Knowledge check against 1D10 + ' + n(t) + ' or ' + state + ' for a phase', check: t });
       }
       return out;
+    }
+
+    // ---------- Boss Resolve (rules.md, Bosses) ----------
+    // At the start of each of its turns, a Boss may end one condition or control effect on itself. Stacks stay;
+    // only the effect ends. Offered once per turn, while it is the Boss's turn.
+    const turnKey = combat => combat.phase + ':' + combat.turn;
+    function resolveOptions(combat, c) {
+      if (c.role !== 'Boss' || c.dead) return [];
+      const entry = activeEntry(combat);
+      if (!entry || entry.cid !== c.id || (c.resolve && c.resolve.key === turnKey(combat))) return [];
+      return [...c.conditions.map(name => ({ kind: 'condition', name })),
+        ...stackEffects(c, combat).filter(e => e.state).map(e => ({ kind: 'state', name: e.state }))];
+    }
+    function useResolve(combat, c, option) {
+      if (option.kind === 'condition') c.conditions = c.conditions.filter(x => x !== option.name);
+      c.resolve = { key: turnKey(combat), state: option.kind === 'state' ? option.name : null };
+      log(combat, c.name + ' uses Boss Resolve: ' + option.name + ' ends' + (option.kind === 'state' ? ' this turn (stacks stay).' : '.'));
     }
 
     // ---------- Movement ----------
@@ -405,7 +424,7 @@
       STACK_TYPES, DAMAGING_STACKS, CONDITIONS, FOOTPRINT, DEATH_CLOCK,
       die, roll, fromEncounter, npcCombatant, addNpc, addEnemy: addNpc, get, side, initiativeOf, buildOrder, begin, inSurprise, canAct,
       nextTurn, activeEntry, moveEntry, endPhase, isDowned, hurt, heal, stabilize,
-      computeDamage, applyAttack, addStacks, recover, stackEffects, movement, footprint, distance,
+      computeDamage, applyAttack, addStacks, recover, stackEffects, resolveOptions, useResolve, movement, footprint, distance,
       cooldownOf, isReady, markUsed, chooseAbility, rollAttack, xpSummary, log
     };
   }

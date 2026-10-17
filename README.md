@@ -23,6 +23,8 @@ Every app follows your device's light or dark setting. The round button at the t
 
 Edit once and every app picks it up. Then raise the version in `sheet/sw.js` and `codex/sw.js` (for example `codex-v4` to `codex-v5`) so installed phones download the new data.
 
+To change the data with Claude, run `node tools/export-handoffs.js`. It writes `exports/handoff/`: one file each for creatures, skills, races and traits, the shared rule tables, the Codex's rules text, and the GM tool's rulings and scaling. Each holds the current data, its exact format and rules, and how Claude Code brings a change in. Put those files in your Claude project; paste Claude's answers into Claude Code; then run the export again and refresh the project.
+
 ## Opening the apps on this computer
 
 - **GM tool:** double-click `gm/index.html`.

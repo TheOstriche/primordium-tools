@@ -40,9 +40,15 @@ check('share lost', d.shareLost, 0.51, 0.005);
 if (d.band !== 'Hard') { failed++; console.log('FAIL band: ' + d.band); } else console.log('ok   band: Hard');
 
 // XP matches what npc-data.js already lists.
-const xpOff = NPCS.filter(n => Math.abs(R.xpFor(n.role, n.level) - n.xp) > 0.5);
+const xpOff = NPCS.filter(n => R.xpFor(n.role, n.level) !== n.xp);   // halves round up (owner, 2026-10-17)
 if (xpOff.length) { failed++; console.log('FAIL xp differs for: ' + xpOff.map(n => n.name).join(', ')); }
 else console.log('ok   xp matches all ' + NPCS.length + ' creatures');
+
+// Encounter budgets in SE (Game Master's Guide 2.0): a Boss alone is 2.5 SE per player for four players.
+const se = R.encounterSE(6, 4, [{ role: 'Boss', level: 6, count: 1 }]);
+check('a Boss alone: SE per player for four players', se.perPlayer, 2.5);
+if (se.band !== 'Deadly') { failed++; console.log('FAIL a Boss fight should be Deadly by design, got ' + se.band); } else console.log('ok   a Boss fight is Deadly by design');
+check('a Standard two levels up counts (20 + 6 x 7) / (20 + 6 x 5)', R.encounterSE(5, 1, [{ role: 'Standard', level: 7, count: 1 }]).total, 62 / 50);
 
 // Wolf: one Basic bite, 1 strike D10 = 5.5.
 check('wolf damage per turn', R.estimateDamagePerTurn(NPCS.find(n => n.name === 'Wolf')), 5.5);
