@@ -31,14 +31,16 @@ When you change any file here or anything it loads from `../shared/`, raise the 
 ## Files
 
 - `index.html`: the app shell; it loads the shared files, then the sheet's own scripts in this order:
-  - `data.js`: lists only the sheet uses (resources, conditions, materials, weapons, armor slots)
+  - `data.js`: lists only the sheet uses (resources, conditions, weapons, armor slots)
   - `js/store.js`: saving, new characters, upgrading characters saved by older versions, and what is on screen
   - `js/rules.js`: totals (stats, HP, armor, carrying, warnings), stacks, and the deck
   - `js/ui.js`: toasts, form fields, the dice tray log, impact effects on HP
   - `js/views.js`: the character list and the five tabs
   - `js/sheets.js`: bottom sheets (add an effect, equip or edit an item)
+  - `js/shop.js`: a shop opened from the GM's link or QR code: pick who is buying, buy (marks come off, the item goes in the pack; Haggler applies itself)
   - `js/app.js`: actions, every tap (the `TAPS` table), forms, and the ⋯ menu
 - `../shared/core.js` (shared with every app): rarities, stats, stacks and recovery, XP, movement
+- `../shared/items-data.js` and `../shared/items.js` (shared with every app): materials (the material picker), prices, and what a bought item becomes
 - `../shared/primordium-data.js` and `../shared/character-rules.js` (shared with the GM tool and the Codex): every skill, race, and trait, and how they add up
 - `../shared/tactics-deck.js` and `../shared/dice.js` (shared with the Codex): the tactical deck and dice rolls
 - `../shared/fx.js` (shared with the Codex and the GM tool): impact effects for rolls, cards, HP, combat, and rests. Turn them, sound, or vibration on and off in **⋯ → Effects**.

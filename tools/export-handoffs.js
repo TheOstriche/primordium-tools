@@ -6,8 +6,8 @@
 const fs = require('fs'), path = require('path');
 const { root, read, perksNamedInCode } = require('./lib/data-links.js');
 global.window = {};
-for (const f of ['shared/core.js', 'shared/primordium-data.js', 'shared/npc-data.js', 'codex/codex-data.js', 'sheet/data.js', 'shared/tactics-deck.js']) eval(read(f));
-const Core = window.PrimordiumCore, P = window.PRIMORDIUM_DATA, NPCS = window.PRIMORDIUM_NPCS, C = window.CODEX_DATA, LISTS = window.SHEET_LISTS, DK = window.PrimordiumDeck;
+for (const f of ['shared/core.js', 'shared/items-data.js', 'shared/items.js', 'shared/primordium-data.js', 'shared/npc-data.js', 'codex/codex-data.js', 'sheet/data.js', 'shared/tactics-deck.js']) eval(read(f));
+const Core = window.PrimordiumCore, IT = window.PrimordiumItems, ITD = window.PRIMORDIUM_ITEMS, P = window.PRIMORDIUM_DATA, NPCS = window.PRIMORDIUM_NPCS, C = window.CODEX_DATA, LISTS = window.SHEET_LISTS, DK = window.PrimordiumDeck;
 const S = JSON.parse(read('gm/data/scaling.json'));
 // The conditions the GM can mark, read from the code so the handoff always matches it.
 const GM_CONDITIONS = JSON.parse(read('gm/js/combat-engine.js').match(/const CONDITIONS = (\[[^\]]*\])/)[1].replace(/'/g, '"'));
@@ -264,7 +264,7 @@ ${code(json(P.traits))}
   const deckRows = DK.LEVELS.map(l => { const b = DK.build(l); return [DK.levelLabel(l), ...Core.RARITIES.map(r => b.counts[r] || '')]; });
   const b0 = DK.build({ base: 0 });
   docs['rule-tables.md'] = `${header('Primordium 2.0 rule tables', 'The numbers and lists every app shares, the tactical deck\'s rules, and the sheet\'s own lists.', [
-    ['`shared/core.js` (`window.PrimordiumCore`)', 'All three apps and the tests: rarities, stats, the D20 tactics table, cooldowns, roles and XP, sizes, stacks and recovery, movement, materials'],
+    ['`shared/core.js` (`window.PrimordiumCore`)', 'All three apps and the tests: rarities, stats, the D20 tactics table, cooldowns, roles and XP, sizes, stacks and recovery, movement'],
     ['`shared/tactics-deck.js`', 'Sheet and Codex: the deck\'s starting cards, Tactics promotions, suit riders, and every deck mechanic'],
     ['`sheet/data.js` (`window.SHEET_LISTS`)', 'Sheet only: resources, conditions, weapon types, armor slots'],
     ['`gm/js/combat-engine.js` → `CONDITIONS`', 'GM tool only: conditions the GM can mark on a creature']])}
@@ -311,11 +311,7 @@ ${list(Core.SIZES)}. Their effects are Codex text (\`rules-text.md\`, the Sizes 
 
 5 + Speed meters, at least 2M.
 
-## Materials
-
-${table(['Tier', 'Material', 'Notes'], Core.MATERIALS.map(([t, n, d]) => [t, n, d]))}
-
-Shown in the Codex's Materials table; picking a material on the sheet fills in an item's tier.
+Materials, prices, and Condition are item data: see \`items.md\`.
 
 ## The tactical deck
 
@@ -374,17 +370,14 @@ ${table(['Table', 'Each row'], [
     ['`sizes`', '`["Size", "Space", "Effect"]`'],
     ['`wealth`', '`{ "roll" (D4), "marks", "gear" }`: starting wealth'],
     ['`outOfCombatXP`', '`["Event", "Award", "Examples"]`'],
-    ['`consumables`', '`["Item", "Effect", marks]`'],
-    ['`enchantments`', '`["Name", "Slot", "Active or Passive", "Effect"]`'],
-    ['`prices`', '`{ "columns": ["Item", "T0", … "T7"], "rows": [["Item", marks at each tier, …]], "note" }`: weapon, armor, and ammunition prices by material tier'],
-    ['`condition`', '`{ "columns": ["Item", "Condition"], "rows": [["Item", "rule"]] }`: starting Condition by item type and material']])}
+    ['`enchantments`', '`["Name", "Slot", "Active or Passive", "Effect"]` (an enchantments build comes later)']])}
 
-Rarities, the tactics table, cooldowns, XP, and materials are not here: they are in \`shared/core.js\` (\`rule-tables.md\`).
+Rarities, the tactics table, cooldowns, and XP are not here: they are in \`shared/core.js\` (\`rule-tables.md\`). Materials, prices, Condition, and consumables are item data (\`items.md\`).
 
 ## What to send back
 
 ${code(json({ rules: { add: [{ id: 'new-section', title: '…', group: 'Combat', entries: [['Term', 'Text']] }], change: [{ id: 'stacks', term: 'Recovery', text: 'new text' }] },
-  tables: { consumables: { add: [['New Potion', 'Heal 3D6.', 40]] } } }))}
+  tables: { outOfCombatXP: { add: [['New event', '10', 'For example …']] } } }))}
 
 ${bringIn(['codex/codex-data.js'], [
     'Apply the change in `codex/codex-data.js` (keep each section\'s `id` stable; search links use it).',
@@ -397,6 +390,68 @@ ${code(json(C.rules))}
 ## All current tables
 
 ${code(json(T))}
+`;
+}
+
+/* ==================== items ==================== */
+{
+  const weapons = ITD.gear.filter(g => g.category === 'weapon').map(g => g.name);
+  docs['items.md'] = `${header('Primordium 2.0 items', `${ITD.materials.length} materials, ${ITD.gear.length} gear items, ${ITD.consumables.length} consumables, ${ITD.other.length} other item(s), and ${Object.keys(ITD.shopTypes).length} shop types. Enchantments are not here yet (a separate build).`, [
+    ['`shared/items-data.js` (`window.PRIMORDIUM_ITEMS`)', 'GM tool: the Shops tab (filling, adding, pricing, selling); sheet: buying from a shop link, the material picker; Codex: the Materials, Prices, Condition, and consumables tables'],
+    ['`shared/items.js` (`window.PrimordiumItems`)', 'The item rules worked out from that data (Condition, armor, selling, Haggler, shop stock, shop links). Code, not data.']])}
+
+## Format
+
+${table(['Key', 'What it holds'], [
+    ['`priceNote`', 'The note under the Codex\'s Prices table.'],
+    ['`materials`', '`{ "name", "tier" (0–7), "kind" ("metal", "wood", "stone", or "glass"), "condition" (optional multiplier: 1.5 or 0.5), "notes" }`. An item made of a material has its tier. Wood (Oak) is offered only for gear marked `wood`.'],
+    ['`gear`', '`{ "name", "category" ("weapon", "shield", "armor", or "ammo"), "prices": [8 numbers, Tier 0 to Tier 7], "wood" (optional: can be Oak), "weight" ("light" or "heavy", armor only), "set" (armor sold as a full set), "bundle" (ammunition count, e.g. 20) }`. Items with the same prices share a row in the Codex.'],
+    ['`condition`', 'Starting Condition by category: `{ "start", "perTier" }`. Ammunition has none.'],
+    ['`armorValue`', 'Armor a full set gives, by weight: `{ "start", "perTier" }`.'],
+    ['`selling`', '`rate` (what merchants pay, as a share of value), `hagglerPerk` (the perk name the sheet looks for), `hagglerBuy` and `hagglerSell` (price multipliers with that perk).'],
+    ['`consumables`', '`{ "name", "effect", "price" }`. Dice in the effect ("2D6") become tappable rolls in the Codex.'],
+    ['`other`', 'Anything else a shop can sell by name: `{ "name", "price", "sell" (optional fixed buy-back price), "notes" }`.'],
+    ['`gearTiers`', 'Which gear tiers shops stock at each party level: `{ "levels": [from, to], "common": [tiers], "rare": [tiers] }` (Game Master\'s Guide, Rewards).'],
+    ['`shopTypes`', '`{ "Type": { "stock": [item names from gear, consumables, or other], "maxTier" (optional cap) } }`. What Auto-fill puts in each kind of shop.'],
+    ['`stockQty`', 'How many of each Auto-fill stocks: `[fewest, most]` by gear category, `consumable`, and `other`.'],
+    ['`rareChance`', 'Chance (0–1) that Auto-fill also stocks each item at a rarer tier.']])}
+
+## Rules the apps work out (\`shared/items.js\`)
+
+- Condition: ${IT.conditionRows().map(([a, b]) => `${a}: ${b}`).join('; ')}. Rounded down.
+- Armor (full sets): light ${ITD.armorValue.light.start} at Tier 0, +${ITD.armorValue.light.perTier} per tier; heavy ${ITD.armorValue.heavy.start}, +${ITD.armorValue.heavy.perTier} per tier.
+- Selling: merchants pay ${ITD.selling.rate * 100}% of value (rounded down), or an item's own \`sell\` price. With ${ITD.selling.hagglerPerk}, buying costs ${Math.round((1 - ITD.selling.hagglerBuy) * 100)}% less and selling pays ${Math.round((ITD.selling.hagglerSell - 1) * 100)}% more.
+- A shop can raise or lower all its prices by a percent (the GM sets it).
+- Auto-fill: each gear item a shop type stocks comes at each of the level's common tiers (and, at the \`rareChance\`, each rare tier), in a random material of that tier.
+- A shop's items can also be custom: any name, price, and notes the GM types (optionally marked weapon or armor).
+- A bought item goes into the character's pack with its tier, material, and Condition (and armor for armor sets), ready to equip. Full armor sets go in the Chest slot.
+
+## Tool defaults to confirm
+
+These are the GM tool's own choices, not guide rules; the owner may change them: \`shopTypes\`, \`stockQty\`, \`rareChance\`; Oak offered only for ${list(ITD.gear.filter(g => g.wood).map(g => g.name))}; Condition after a ±50% material rounded down.
+
+## Names the code depends on
+
+- Weapon names (${list(weapons)}) become the sheet's weapon type when bought; they should match the sheet's weapon types (${list(LISTS.weapons)}).
+- Every name in a \`shopTypes\` stock list must be a gear, consumable, or other item. \`tools/test-items.js\` checks this.
+- \`selling.hagglerPerk\` (${'`' + ITD.selling.hagglerPerk + '`'}) must be the perk's exact name in the Skill Guide (\`skills.md\`).
+- Shop links carry item names, not prices: renaming an item breaks links made before the change (links are made fresh for each visit, so this rarely matters).
+
+## What to send back
+
+${code(json({ gear: { add: [{ name: 'Rapier', category: 'weapon', prices: [60, 120, 240, 500, 1000, 2050, 4200, 8500] }], change: [{ name: 'Dagger', prices: [30, 60, 120, 260, 510, 1050, 2150, 4350] }] },
+  consumables: { add: [{ name: 'New Potion', effect: 'Heal 3D6.', price: 40 }] },
+  other: { add: [{ name: 'Lantern', price: 8, notes: '…' }] },
+  shopTypes: { add: { Jeweler: { stock: ['…'] } } } }))}
+
+${bringIn(['shared/items-data.js'], [
+    'Apply the change in `shared/items-data.js`.',
+    'If a rule the apps work out changes (Condition, armor, selling), change `shared/items.js` and its checks in `tools/test-items.js`.',
+    'A new weapon name the sheet does not know: add it to `SHEET_LISTS.weapons` in `sheet/data.js` too.'])}
+
+## Current data
+
+${code(json(ITD))}
 `;
 }
 
@@ -451,8 +506,9 @@ ${table(['File', 'Covers', 'Size'], [
   ['`npcs.md`', 'Creatures (NPCs) and their families', sizes['npcs.md'] + ' KB'],
   ['`skills.md`', 'Skills: every tier, ability, perk, and automatic effect; the perk names the code reads', sizes['skills.md'] + ' KB'],
   ['`races-and-traits.md`', 'Races (stats, specials, lore) and background traits', sizes['races-and-traits.md'] + ' KB'],
-  ['`rule-tables.md`', 'Shared numbers: rarities, the D20 tactics table, cooldowns, XP, stacks, movement, materials; the tactical deck; the sheet\'s lists', sizes['rule-tables.md'] + ' KB'],
-  ['`rules-text.md`', 'The Codex\'s rules sections and tables (sizes, wealth, consumables, enchantments, …)', sizes['rules-text.md'] + ' KB'],
+  ['`rule-tables.md`', 'Shared numbers: rarities, the D20 tactics table, cooldowns, XP, stacks, movement; the tactical deck; the sheet\'s lists', sizes['rule-tables.md'] + ' KB'],
+  ['`rules-text.md`', 'The Codex\'s rules sections and tables (sizes, wealth, enchantments, …)', sizes['rules-text.md'] + ' KB'],
+  ['`items.md`', 'Items: materials, gear and prices, Condition and armor, consumables, selling, and how GM shops stock', sizes['items.md'] + ' KB'],
   ['`gm-rules-and-scaling.md`', 'The GM tool\'s combat rules, the owner\'s rulings, and the scaling workbook', sizes['gm-rules-and-scaling.md'] + ' KB']])}
 
 ## How a change flows

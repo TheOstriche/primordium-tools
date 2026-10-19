@@ -113,6 +113,7 @@ const ACTS = {
     rerender();
     FX.mood('rest');
   },
+  leaveshop() { shopVisit = null; history.replaceState(null, '', location.pathname + location.search); listView(); },
   delete() {
     if (!confirm(`Delete ${current.name || 'this character'}? This can not be undone unless you have a backup.`)) return;
     delete db[current.id];
@@ -170,6 +171,7 @@ const TAPS = [
   ['rmitem', d => { const it = current.items.find(i => i.id === d.rmitem); if (confirm(`Remove ${it.name}?`)) { current.items = current.items.filter(i => i !== it); rerender(); } }],
   ['augcat', d => augStep(2, d.augcat)],
   ['augtype', d => d.augtype === 'Weakened' ? augStep(2, 'weakened') : addAug({ cat: d.cat, type: d.augtype, count: 1 })],
+  ['buy', d => buy(d.buy)],
   ['act', d => ACTS[d.act] && ACTS[d.act]()]
 ];
 document.addEventListener('click', e => {
@@ -205,6 +207,7 @@ document.addEventListener('change', e => {
     toast([`Trait added: ${tr.name}`, tr.effect, ...(PrimordiumCharacter.traitFx(tr).length ? ['Applied to your stats'] : [])]);
     return rerender();
   }
+  if (id === 'shopBuyer') { shopVisit.buyer = t.value; return shopView(); }
   if (id === 'abilityPick') { current.abilityPick = t.value; return rerender(); }
   if (t.dataset.promo) { (current.deckPicks ??= {})[t.dataset.promo] = t.value; return rerender(); }
   if (id === 'kindPick') { const it = current.items.find(i => i.id === $('#equipForm').dataset.id); it.kind = t.value; return itemSheet(it.id); }
@@ -248,7 +251,7 @@ document.addEventListener('submit', e => {
 });
 
 /* ---------- the ⋯ menu: backups and effects ---------- */
-$('#backBtn').onclick = () => { saveNow(); listView(); };
+$('#backBtn').onclick = () => { saveNow(); if (shopVisit && !current) return ACTS.leaveshop(); listView(); };
 // Effects settings: markup and saving in ../shared/fx.js, the same rows as the Codex.
 $('#menuBtn').onclick = () => { $('#fxPrefs').innerHTML = FX.settingsHTML(); $('#menu').showModal(); };
 $('#fxPrefs').onclick = e => FX.settingsClick(e, $('#fxPrefs'));
@@ -279,3 +282,5 @@ $('#importFile').onchange = async e => {
 document.addEventListener('toggle', e => { const g = e.target.dataset?.group; if (g) e.target.open ? openGroups.add(g) : openGroups.delete(g); }, true);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 listView();
+openShopLink();   // a shop link (#shop=…) opens the shop over the list (js/shop.js)
+window.addEventListener('hashchange', openShopLink);

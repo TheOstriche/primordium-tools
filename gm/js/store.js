@@ -12,6 +12,7 @@
     players: [],        // { id, name, level, hp, armor, stats:{STR,AGI,KNO,SPD,PER,SPE}, xp, notes }
     encounters: [],     // { id, name, partyIds:[], enemies:[{ npcName, count }], map:{ cols, rows, cell, lineOpacity, imageKey } }
     customNpcs: [],     // same shape as npc-data.js entries, plus { id, custom:true }
+    shops: [],          // { id, name, type, level, adjust, items:[shop item] } (see ../shared/items.js)
     combat: null,       // the fight in progress (see js/combat-engine.js)
     settings: { currentEncounterId: null, lastBackupAt: null }
   });

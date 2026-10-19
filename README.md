@@ -5,7 +5,7 @@ Three apps for Primordium 2.0 that share one copy of the game's rules and data, 
 | Folder | What it is | Live link |
 |---|---|---|
 | `sheet/` | Player character sheet (phone app, works offline) | https://theostriche.github.io/primordium-tools/sheet/ |
-| `gm/` | GM combat tool (laptop) | https://theostriche.github.io/primordium-tools/gm/ |
+| `gm/` | GM tool: combat, encounters, shops (laptop) | https://theostriche.github.io/primordium-tools/gm/ |
 | `codex/` | Rules reference: skills, creatures, rules, dice, and the tactical deck (phone app, works offline) | https://theostriche.github.io/primordium-tools/codex/ |
 | `shared/` | What all of them use: rule tables, game data, the deck, dice, effects, and the look | |
 
@@ -23,7 +23,7 @@ Every app follows your device's light or dark setting. The round button at the t
 
 Edit once and every app picks it up. Then raise the version in `sheet/sw.js` and `codex/sw.js` (for example `codex-v4` to `codex-v5`) so installed phones download the new data.
 
-To change the data with Claude, run `node tools/export-handoffs.js`. It writes `exports/handoff/`: one file each for creatures, skills, races and traits, the shared rule tables, the Codex's rules text, and the GM tool's rulings and scaling. Each holds the current data, its exact format and rules, and how Claude Code brings a change in. Put those files in your Claude project; paste Claude's answers into Claude Code; then run the export again and refresh the project.
+To change the data with Claude, run `node tools/export-handoffs.js`. It writes `exports/handoff/`: one file each for creatures, skills, races and traits, the shared rule tables, items, the Codex's rules text, and the GM tool's rulings and scaling. Each holds the current data, its exact format and rules, and how Claude Code brings a change in. Put those files in your Claude project; paste Claude's answers into Claude Code; then run the export again and refresh the project.
 
 ## Opening the apps on this computer
 
@@ -32,7 +32,7 @@ To change the data with Claude, run `node tools/export-handoffs.js`. It writes `
 
 ## Checking everything still works
 
-Run `node tools/test.js`. It checks the shared rule tables, the tactical deck at every Tactics level, the GM tool's game math and combat rules, and (if Python is installed) the Codex's guide parser.
+Run `node tools/test.js`. It checks the shared rule tables, the tactical deck at every Tactics level, items, shop links, and QR codes, the GM tool's game math and combat rules, and (if Python is installed) the Codex's guide parser.
 
 ## Publishing
 

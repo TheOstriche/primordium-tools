@@ -30,6 +30,11 @@ All eight features are built. Tabs: Encounter, Combat (grid map and combat in on
 - **Import from the character sheet:** the sheet's backup file (`{ id: character }`) is read with `../shared/character-rules.js`, the same code the sheet uses, so HP (maximum), armor (total), and stats match the sheet. Imported players keep a `sheetId`; importing again updates them.
 - **Humanoid skill attacks:** each humanoid token picks its skill (and path) from the options its stat block allows. Its abilities come from that skill in the Skill Guide up to its tier and the best rarity its tactics can roll; Roll tactics picks among the Standard ones. Strike dice are read from the ability text when possible; otherwise the GM types damage ("Type damage instead" works for any NPC). Custom humanoid NPC types can store a default `skillSetup`.
 
+### Added 2026-10-18 (owner request): Shops
+- **Shops tab** (`js/shops.js`, saved in `state.shops`, included in backups): a shop has a name, kind, party level, and price change in percent. Auto-fill stocks it from `../shared/items-data.js` (`shopTypes`, `gearTiers` by level, `stockQty`, `rareChance`); items are added by guided choice (gear, tier, material; consumable; other) or as custom items. A sell-offer helper uses the selling rules and Haggler. Enchantments are not in shops yet (a later build).
+- **Player link:** the whole shop is packed into the link (`../sheet/#shop=…`, `PrimordiumItems.encodeShop`) and shown as a QR code (`../shared/qr.js`, written here with no library). The sheet's `js/shop.js` opens it; buying takes marks and adds the item to the pack, ready to equip. Purchases do not change the GM's stock.
+- Tool defaults the owner may change (not guide rules): the shop kinds and what each stocks, quantities, the rare-tier chance, Oak only for bows, shields, and spears, and Condition after a ±50% material rounded down.
+
 ## Combat screen principles (owner feedback, 2026-10-08)
 - Players run their own characters. The GM tool only tracks their HP (and downed/death clock), position, and what it needs for movement and initiative (Speed, Perception, armor, level). Do not add player stacks, conditions, or attack tools.
 - Enemy attacks are one flow: pick an ability (or Roll tactics), pick the target (list or click its token), roll, set each target's defense, confirm.

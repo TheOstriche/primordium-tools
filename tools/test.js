@@ -8,6 +8,7 @@ const suites = [
   ['Shared core (rule tables, helpers)', 'node', ['tools/test-core.js']],
   ['Stored data (names, values, cross-links)', 'node', ['tools/test-data.js']],
   ['Tactical deck', 'node', ['tools/test-deck.js']],
+  ['Items and shops', 'node', ['tools/test-items.js']],
   ['GM game math', 'node', ['gm/tools/test-rules.js']],
   ['GM combat rules', 'node', ['gm/tools/test-combat.js']],
   ['Codex guide parser (Python)', process.platform === 'win32' ? 'python' : 'python3', ['-m', 'unittest', 'discover', '-s', 'codex/tests']]

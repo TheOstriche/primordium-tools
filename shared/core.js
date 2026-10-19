@@ -63,27 +63,6 @@
   /* ---------- movement ---------- */
   const movement = speed => Math.max(2, 5 + (Number(speed) || 0));   // meters (1 square = 1M)
 
-  /* ---------- materials ---------- */
-  // [item tier, material, notes]: an item made of a material has its tier (Game Guide 2.0, Crafting).
-  const MATERIALS = [
-    [0,"Oak","Wood for bows, shields, staves, and spear shafts. Light and cheap."],
-    [0,"Bronze","Soft and easy to work; the first metal most smiths learn."],
-    [0,"Iron","The common standard for tools, weapons, and armor everywhere."],
-    [1,"Steel","Refined iron: reliable, and the mark of a real professional."],
-    [1,"D-Iron","Dwarven iron: denser and far more durable than common iron."],
-    [1,"Silv-Steel","Silvered steel. Weaker than plain steel, but deals 50% more damage to shapeshifters such as werewolves."],
-    [2,"D-Steel","Dwarven steel: the dwarves' finest common alloy, and the toughest Tier 2 metal."],
-    [2,"Etherian","A dark-elf alloy from Etriun: light and quiet."],
-    [2,"Lyran Stone","River stone from Lyra's Well, shaped and hardened by Lyros craftsmen."],
-    [3,"Glacius","Frost-forged metal from the north; always cold to the touch."],
-    [3,"Aurausheen","The golden light-metal of the Imperios, said to carry Aurau's blessing."],
-    [4,"Mag-Glass","Glass grown through with magic. Fragile, but it carries enchantments well."],
-    [4,"Druiniun","A sea metal from the Isles of Drune that never rusts."],
-    [5,"Pitch","Black volcanic metal from the Ashlands: very heavy and very hard."],
-    [6,"PriGlass","Primordial glass. Fragile, but saturated with primordial power."],
-    [7,"PriSteel","Primordial steel, the strongest material known."]
-  ];
-
   /* ---------- text helpers ---------- */
   const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);           // safe inside HTML text and attributes
@@ -96,7 +75,7 @@
     RARITIES, rarityIndex, rarityStep, STATS, STAT_NAMES, STAT_KEYS,
     TACTICS, TACTICS_TABLE, rarityForRoll, reachableRarities, COOLDOWNS, cooldownText,
     ROLES, ROLE_XP, xpFor, xpToNextLevel, SIZES,
-    STACKS, DAMAGING_STACKS, chilledAt, RECOVERY_START, RECOVERY_FLOOR, recoveryLoss, movement, MATERIALS,
+    STACKS, DAMAGING_STACKS, chilledAt, RECOVERY_START, RECOVERY_FLOOR, recoveryLoss, movement,
     esc, slug, signed, article, plural
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Core;

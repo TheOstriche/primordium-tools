@@ -1,7 +1,7 @@
 // Character sheet: saving, new characters, upgrading characters saved by older versions, and what is on screen.
 // Every character on this phone lives in localStorage under primordium.characters.v1 as { id: character }.
 // The GM tool reads the same shape from an exported backup (gm/js/encounter.js).
-// Load order: store.js, rules.js, ui.js, views.js, sheets.js, app.js.
+// Load order: store.js, rules.js, ui.js, views.js, sheets.js, shop.js, app.js.
 "use strict";
 
 const Core = window.PrimordiumCore;   // ../shared/core.js

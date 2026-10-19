@@ -4,6 +4,7 @@
 "use strict";
 
 const Core = window.PrimordiumCore;   // ../shared/core.js: rarities, stats, the tactics table, text helpers
+const Items = window.PrimordiumItems;   // ../shared/items.js: materials, prices, Condition, consumables
 const { RARITIES: RAR, STATS, esc, slug, signed } = Core;
 
 const DATA = (() => {

@@ -13,7 +13,8 @@ Live at `https://theostriche.github.io/primordium-tools/codex/`.
 | `../shared/tactics-deck.js`, `../shared/dice.js` | The tactical deck (cards, promotions, and every Tactics mechanic) and dice rolls. Shared with the sheet. |
 | `../shared/fx.js` | Impact effects: card plays from Rare to Mythic, crits and natural 1s, tactics rolls. Settings are at the bottom of the Dice tab. |
 | `../shared/core.js` | Rarities, the D20 tactics table, cooldowns, roles and XP: shared with the other apps. |
-| `codex-data.js` | What only the Codex shows: rules sections, tables (tactics, deck, wealth, materials, consumables, enchantments, sizes, XP roles), race lore (country, deity, appearance), skill summaries and A/S/K stat, creature family groups and descriptions. Hand-transcribed from Game Guide 2.0 and NPC Guide 2.0. |
+| `../shared/items-data.js`, `../shared/items.js` | Materials, prices, Condition, and consumables (the Tables screen). Shared with the sheet and the GM tool's Shops. |
+| `codex-data.js` | What only the Codex shows: rules sections, tables (deck, wealth, enchantments, sizes, out-of-combat XP), race lore (country, deity, appearance), skill summaries and A/S/K stat, creature family groups and descriptions. Hand-transcribed from Game Guide 2.0 and NPC Guide 2.0. |
 
 `app.js` reshapes the shared data for the Codex when the page loads. There is no build step: edit a data file, refresh, done.
 

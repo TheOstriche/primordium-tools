@@ -52,7 +52,7 @@
         linkCard,
         h('div.card',
           h('h2', 'Backup file'),
-          h('p.muted', 'Download everything (players, encounters, custom NPC types, map images) as one file, or load one back in.'),
+          h('p.muted', 'Download everything (players, encounters, custom NPC types, shops, map images) as one file, or load one back in.'),
           h('div.row',
             h('button.primary', { onclick: () => run(Store.exportDownload, 'Backup downloaded.') }, 'Download backup'),
             h('button', { onclick: () => fileInput.click() }, 'Load a backup'),
@@ -62,7 +62,8 @@
           h('ul',
             h('li', count(s.players.length, 'player')),
             h('li', count(s.encounters.length, 'encounter')),
-            h('li', count(s.customNpcs.length, 'custom NPC type'))))
+            h('li', count(s.customNpcs.length, 'custom NPC type')),
+            h('li', count((s.shops || []).length, 'shop'))))
       )
     );
   }

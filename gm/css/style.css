@@ -299,7 +299,7 @@ input.tiny-num { width: 50px; padding: 2px 4px; }   /* input. beats the 70px inp
 .panel-foot { justify-content: flex-end; border-top: 1px solid var(--rule); padding-top: 8px; }
 .token.targeted { box-shadow: 0 0 0 3px var(--danger), 0 0 12px 3px color-mix(in srgb, var(--danger) 80%, transparent); }
 /* ---- Reference and Creatures ---- */
-#view-reference.active, #view-creatures.active { display: flex; flex-direction: column; height: calc(100vh - 62px - 56px); }
+#view-reference.active, #view-creatures.active, #view-shops.active { display: flex; flex-direction: column; height: calc(100vh - 62px - 56px); }
 .ref-nav { display: flex; gap: 6px; margin-bottom: 10px; }
 .ref-nav button.toggle { font-size: 14px; padding: 5px 14px; }
 .ref-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
@@ -359,6 +359,17 @@ input.tiny-num { width: 50px; padding: 2px 4px; }   /* input. beats the 70px inp
 .warnings { border: 1px solid var(--warn); border-radius: var(--radius); padding: 6px 10px; margin-top: 10px; }
 .warnings h3 { color: var(--warn); margin: 0; }
 .good { color: var(--good); }
+
+/* ---- Shops ---- */
+.shop-table { width: 100%; border-collapse: collapse; }
+.shop-table th { text-align: left; font-size: 12px; color: var(--ink-dim); font-weight: normal; padding: 4px 6px; }
+.shop-table td { border-top: 1px solid var(--rule); padding: 6px; vertical-align: top; }
+.shop-table td:not(:first-child) { width: 1%; white-space: nowrap; }
+.shop-table .qty-input { width: 64px; }
+.shop-table .price-input { width: 84px; }
+.qr { background: #fff; border-radius: var(--radius); padding: 6px; margin-top: 10px; }   /* white on purpose: QR codes need light behind them */
+.qr svg { display: block; width: 100%; height: auto; }
+.warn { color: var(--warn); }
 
 /* ---- Toasts (look from the shared theme) ---- */
 #toasts { position: fixed; bottom: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 50; max-width: 380px; }
