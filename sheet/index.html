@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Only this site's own scripts may run; fonts come from Google Fonts. A second guard behind the escaping in the code. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#121019">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -32,6 +34,9 @@
   <p>Characters are saved on this device. Export a backup to move them to another phone or keep them safe.</p>
   <button id="exportBtn" class="btn">Export all characters</button>
   <label class="btn ghost">Import a backup<input id="importFile" type="file" accept="application/json" hidden></label>
+  <h2 style="margin-top:18px">Shops</h2>
+  <p>Scanning the GM's shop code opens the shop here. If it opened in your browser instead of this app, copy the link there and paste it here.</p>
+  <button id="shopLinkBtn" class="btn ghost">Open a shop link</button>
   <h2 style="margin-top:18px">Effects</h2>
   <p>Crits, card plays from Rare to Mythic, and other flourishes. Shared with the Codex on this phone. The light or dark theme is the round button at the top.</p>
   <div id="fxPrefs"></div>

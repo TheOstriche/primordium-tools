@@ -144,6 +144,12 @@
       }
     });
 
+    // The browser took the pointer away mid-drag (a touch gesture, the window losing focus): put the token back.
+    board.addEventListener('pointercancel', () => {
+      if (drag) { drag = null; hideTip(); update(o); }
+      if (rulerLine) rulerLine.dragging = false;
+    });
+
     // Ruler: press and drag in ruler mode.
     board.addEventListener('pointerdown', e => {
       if (!o.ruler || e.button !== 0) return;

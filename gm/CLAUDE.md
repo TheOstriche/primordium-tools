@@ -35,6 +35,10 @@ All eight features are built. Tabs: Encounter, Combat (grid map and combat in on
 - **Player link:** the whole shop is packed into the link (`../sheet/#shop=…`, `PrimordiumItems.encodeShop`) and shown as a QR code (`../shared/qr.js`, written here with no library). The sheet's `js/shop.js` opens it; buying takes marks and adds the item to the pack, ready to equip. Purchases do not change the GM's stock.
 - Tool defaults the owner may change (not guide rules): the shop kinds and what each stocks, quantities, the rare-tier chance, Oak only for bows, shields, and spears, and Condition after a ±50% material rounded down.
 
+### Added 2026-11-11 (code review)
+- **Undo:** every combat change goes through `act()` in `js/combat-view.js`, which keeps the combat as it was (up to 50 steps, this visit only). The Undo button and Ctrl+Z restore it. Make new combat changes through `act()` so they can be undone.
+- **Saving:** `Store.saveNow()` never rejects; failures reach `Store.onError` listeners (shown as a banner). Loaded and imported state goes through `shaped()`. A backup restore reads everything before it writes anything. A second open tab triggers a warning.
+
 ## Combat screen principles (owner feedback, 2026-10-08)
 - Players run their own characters. The GM tool only tracks their HP (and downed/death clock), position, and what it needs for movement and initiative (Speed, Perception, armor, level). Do not add player stacks, conditions, or attack tools.
 - Enemy attacks are one flow: pick an ability (or Roll tactics), pick the target (list or click its token), roll, set each target's defense, confirm.

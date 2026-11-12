@@ -55,6 +55,24 @@ const seq = list => { let i = 0; return () => list[i++ % list.length]; };   // s
   const big = { name: 'Big', type: 'Alchemist', level: 1, adjust: 0, items: Array.from({ length: 40 }, (_, i) => I.gear(D.gear[i % D.gear.length].name, i % 8, '', 3)) };
   check((await I.encodeShop(big)).length < 1200, '40 items fit a phone-readable QR code (under 1,200 characters)');
 
+  // A link is outside input: a hostile or damaged one must come out harmless, or be refused.
+  const evil = I.unpack(JSON.stringify([1, '<img src=x onerror=alert(1)>'.repeat(9), { a: 1 }, 'x', '<b>20</b>', [
+    ['g', 'Sword', 99, '<script>', -5], ['g', 'constructor', 0, '', 1], ['g', 'Bow', 0, 'Oak', 1e9], ['c', '__proto__', 0, '', 1],
+    ['x', '', 0, '', 1, 5, '   '], ['x', '', 0, '', 2, -40, 'Map', 7, 'onclick'], 'junk', null]]));
+  check(evil.name.length <= 80 && evil.type === '' && evil.level === 1 && evil.adjust === 0, 'a hostile link: the shop\'s own fields are forced to short text and plain numbers');
+  check(evil.items.length === 3, 'a hostile link: unknown items and blank custom items are dropped', evil.items.map(i => i.name));
+  const [ev1, ev2, ev3] = evil.items;
+  check(ev1.tier === 7 && ev1.material === '' && ev1.qty === 1 && ev1.price === 8000, 'a hostile link: tier, material, and quantity are forced into range');
+  check(ev2.material === 'Oak' && ev2.qty === 999, 'a hostile link: a real material stays, a huge quantity is capped');
+  check(ev3.price === 0 && ev3.notes === '' && ev3.category === '' && ev3.qty === 2, 'a hostile link: a custom item keeps only a name, a price of 0 or more, and plain notes');
+  const refused = async c => { try { await I.decodeShop(c); return false; } catch (e) { return true; } };
+  check(await refused('') && await refused('q123') && await refused('z!!') && await refused('j' + 'A'.repeat(30000)) && await refused('jbm90IGpzb24') && await refused('zAAAA'),
+    'links that are empty, of another kind, too long, not JSON, or not compressed data are refused');
+  if (typeof CompressionStream === 'function') {
+    const bomb = 'z' + Buffer.from(require('zlib').deflateSync(Buffer.alloc(5e6, 0x20))).toString('base64url');
+    check(bomb.length < 20000 && await refused(bomb), 'a small link that unpacks into something huge is refused');
+  }
+
   // QR codes (shared/qr.js): read each one back the way a scanner does and get the same text.
   eval(fs.readFileSync(path.join(__dirname, '..', 'shared', 'qr.js'), 'utf8'));
   const Q = window.PrimordiumQR;

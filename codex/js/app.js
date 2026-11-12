@@ -7,9 +7,22 @@ const state = {
   tab: store.get('tab', 'home'), diceView: store.get('diceView', 'dice'), stack: [], q: '',
   history: store.get('history', []), pool: [], mod: 0, roleFilter: 'All', ruleGroup: 'Combat'
 };
-function go(tab) { state.tab = tab; state.stack = []; store.set('tab', tab); render(); window.scrollTo(0, 0); }
-function open(page) { state.stack.push(page); render(); window.scrollTo(0, 0); }
-function back() { state.stack.pop(); render(); }
+// Each opened page is also a step in the browser's history, so the phone's own Back button (or swipe) goes
+// back a page instead of leaving the app. history.state holds how many pages are open.
+const depth = () => (history.state && history.state.codexDepth) || 0;
+function go(tab) {
+  state.tab = tab; store.set('tab', tab);
+  if (depth()) { state.pendingTab = true; history.go(-depth()); return; }   // popstate finishes the move
+  state.stack = []; render(); window.scrollTo(0, 0);
+}
+function open(page) { state.stack.push(page); history.pushState({ codexDepth: state.stack.length }, ''); render(); window.scrollTo(0, 0); }
+function back() { if (depth()) history.back(); else { state.stack.pop(); render(); } }
+window.addEventListener('popstate', () => {
+  state.stack.length = state.pendingTab ? 0 : Math.min(state.stack.length, depth());
+  const moved = state.pendingTab; state.pendingTab = false;
+  render();
+  if (moved) window.scrollTo(0, 0);
+});
 function clearSearch() { $('#q').value = ''; state.q = ''; $('#qclear').hidden = true; }
 
 function render() {
@@ -138,5 +151,7 @@ $('#view').addEventListener('change', e => {
   if (t.dataset.promo) { TAC.picks[t.dataset.promo] = t.value; saveTac(); render(); }
 });
 
+// A reload keeps the browser's history but not the open pages: start again from the tab.
+if (depth()) history.replaceState(null, '');
 render();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');

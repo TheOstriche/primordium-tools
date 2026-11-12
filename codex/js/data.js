@@ -92,11 +92,14 @@ DATA.traits.groups.forEach((g, gi) => g.traits.forEach(([n, c, e]) => INDEX.push
   page: { type: 'traits', g: gi, hl: n } })));
 DATA.rules.forEach(sec => sec.entries.forEach(([k, v]) => INDEX.push({ kind: 'Rule', title: k, sub: sec.title, text: v, page: { type: 'rule', id: sec.id, hl: k } })));
 
+// Lower-case copies made once, so each keystroke only compares text.
+INDEX.forEach(it => { it.t = it.title.toLowerCase(); it.body = (it.sub + ' ' + it.text).toLowerCase(); });
+
 // Every word must appear; a word at the start of a title counts most, anywhere in the title next, the body least.
 function search(q) {
   const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
   return INDEX.map(it => {
-    const t = it.title.toLowerCase(), body = (it.sub + ' ' + it.text).toLowerCase();
+    const { t, body } = it;
     let score = 0;
     for (const w of terms) {
       if (t.startsWith(w)) score += 6;

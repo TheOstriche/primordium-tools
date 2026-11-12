@@ -21,7 +21,7 @@ Every app follows your device's light or dark setting. The round button at the t
 - Rule tables (rarities, the D20 tactics table, cooldowns, XP, stacks, movement): `shared/core.js`.
 - Codex-only rules text and tables: `codex/codex-data.js`.
 
-Edit once and every app picks it up. Then raise the version in `sheet/sw.js` and `codex/sw.js` (for example `codex-v4` to `codex-v5`) so installed phones download the new data.
+Edit once and every app picks it up. Then run `node tools/stamp-offline.js`: it raises the version in `sheet/sw.js` and `codex/sw.js` where needed, so installed phones download the new files.
 
 To change the data with Claude, run `node tools/export-handoffs.js`. It writes `exports/handoff/`: one file each for creatures, skills, races and traits, the shared rule tables, items, the Codex's rules text, and the GM tool's rulings and scaling. Each holds the current data, its exact format and rules, and how Claude Code brings a change in. Put those files in your Claude project; paste Claude's answers into Claude Code; then run the export again and refresh the project.
 
@@ -32,7 +32,7 @@ To change the data with Claude, run `node tools/export-handoffs.js`. It writes `
 
 ## Checking everything still works
 
-Run `node tools/test.js`. It checks the shared rule tables, the tactical deck at every Tactics level, items, shop links, and QR codes, the GM tool's game math and combat rules, and (if Python is installed) the Codex's guide parser.
+Run `node tools/test.js` (or `npm test`). GitHub also runs it on every push (`.github/workflows/test.yml`) and emails you if something fails. It checks the shared rule tables, the tactical deck at every Tactics level, items, shop links, and QR codes, the GM tool's game math and combat rules, and (if Python is installed) the Codex's guide parser.
 
 ## Publishing
 

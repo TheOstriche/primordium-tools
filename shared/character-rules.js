@@ -41,4 +41,4 @@
   }
 
   root.PrimordiumCharacter = { SK, STATS, granted, traitFx, core };
-})(window);
+})(typeof window !== 'undefined' ? window : globalThis);

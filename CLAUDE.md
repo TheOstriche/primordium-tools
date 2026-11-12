@@ -13,8 +13,9 @@ One repository (`TheOstriche/primordium-tools`, published with GitHub Pages) hol
 - One copy of everything: a rule table or list goes in `shared/core.js`, game data in `shared/primordium-data.js` or `shared/npc-data.js`, items in `shared/items-data.js`, a component or color in `shared/theme.css`. Never copy them into an app.
 - Styling: the Codex is the house style. Use theme tokens (`var(--glow)`, `var(--r-rare)`, …), never fixed colors, and check light and dark.
 - Phone apps: test at about 375–400px wide; nothing may scroll sideways except tables in their own scroll box.
-- When anything a phone app loads changes (its own files or `shared/`), raise the version in its `sw.js` (`primordium-vN` for the sheet, `codex-vN` for the Codex) and keep its file list matching its `index.html`.
+- When anything a phone app loads changes (its own files or `shared/`), run `node tools/stamp-offline.js`: it raises the version in that app's `sw.js` and updates its fingerprint, so installed phones update. Keep each `sw.js` file list matching its `index.html`. `node tools/test.js` fails if either is forgotten.
 - Storage keys must stay distinct (see `ARCHITECTURE.md`); never change the sheet's `primordium.characters.v1` format without an upgrade step in `sheet/js/store.js`.
 - Game text comes from the owner's guides: don't invent or reword rules. When a rule is unclear, ask.
-- Run `node tools/test.js` after changing rules, data, or the deck.
+- Run `node tools/test.js` after every change (it also checks that every script parses and every page loads real files).
+- Outside input is never trusted: shop links (`PrimordiumItems.decodeShop`), imported backups (`adopt()` in `sheet/js/store.js`, `shaped()` in `gm/js/store.js`). Validate at that boundary, escape with `esc()` in HTML strings, and keep the phone apps free of inline scripts and handlers (their security policy blocks them).
 - The owner commits and pushes with GitHub Desktop. Git for Windows is at `C:\Program Files\Git\cmd\git.exe`.

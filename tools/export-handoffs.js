@@ -36,7 +36,7 @@ function bringIn(files, steps) {
 
 ${steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 ${steps.length + 1}. Run \`node tools/test.js\` from the repository root. Every suite must pass.
-${steps.length + 2}. ${caches.length ? `Raise the version in ${caches.join(' and ')} so installed phones download the new data.` : 'No phone app caches these files, so no offline version needs raising.'}
+${steps.length + 2}. ${caches.length ? `Run \`node tools/stamp-offline.js\`: it raises the version in ${caches.join(' and ')} so installed phones download the new data.` : 'No phone app caches these files, so no offline version needs raising.'}
 ${steps.length + 3}. Run \`node tools/export-handoffs.js\` so these handoff files match the new data, and give the Claude project the refreshed files.
 
 Keep each file's format: a \`window.NAME = …;\` line holding JSON with one-space indentation, and the comment at the top. Never invent or reword rules: game text comes from the owner's guides.`;

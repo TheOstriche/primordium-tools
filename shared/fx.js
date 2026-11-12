@@ -12,7 +12,6 @@
   const GOLD = '#eab14c', RED = '#e0604f', GREEN = '#6fd39a', ASH = '#8d8a96';
   let cfg = {visual: true, sound: false, haptics: true};
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
-  const listeners = [];
   const reducedQ = root.matchMedia ? root.matchMedia('(prefers-reduced-motion: reduce)') : {matches: false};
   const reduced = () => reducedQ.matches;
   let shakeSel = 'main';
@@ -60,7 +59,12 @@
 
   /* ---------- drawing ---------- */
   const rand = (a, b) => a + Math.random() * (b - a);
-  function loop() {
+  // Sparks move one step per frame, tuned for 60 frames a second. A faster screen (120Hz phones) would run
+  // everything at double speed, so a frame that comes too soon is skipped.
+  let lastFrame = 0;
+  function loop(now) {
+    if (now - lastFrame < 14) return requestAnimationFrame(loop);
+    lastFrame = now;
     cx.setTransform(DPR, 0, 0, DPR, 0, 0); cx.clearRect(0, 0, W, H); cx.globalCompositeOperation = lightPage() ? 'source-over' : 'lighter';
     for (let i = rays.length - 1; i >= 0; i--) {
       const r = rays[i]; r.t++; const k = r.t / r.life; if (k >= 1) { rays.splice(i, 1); continue; }
@@ -136,7 +140,9 @@
   let ac;
   function tone(freq, at, dur, type = 'sine', vol = .06) {
     try {
-      ac = ac || new (root.AudioContext || root.webkitAudioContext)(); const t = ac.currentTime + at;
+      ac = ac || new (root.AudioContext || root.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();   // phones pause audio until a tap, and again after the app is hidden
+      const t = ac.currentTime + at;
       const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(freq, t);
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
       o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + .05);
@@ -277,7 +283,7 @@
 
   /* ---------- settings ---------- */
   function settings(next) {
-    if (next) { Object.assign(cfg, next); try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) {} listeners.forEach(f => f(cfg)); }
+    if (next) { Object.assign(cfg, next); try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) {} }
     return {...cfg};
   }
   // Which element shakes (each app's main column; fixed headers and tab bars stay put).

@@ -63,7 +63,8 @@
   }
   const consumable = (base, qty = 1) => ({ id: newId(), kind: 'consumable', base, name: base, price: CONS[base].price, qty });
   const other = (base, qty = 1) => ({ id: newId(), kind: 'other', base, name: base, price: OTHER[base].price, qty });
-  const custom = ({ name, price, qty = 1, notes = '', category = '' }) => ({ id: newId(), kind: 'custom', name, price: Math.max(0, Math.round(+price || 0)), qty, notes, category });
+  const custom = ({ name, price, qty = 1, notes = '', category = '' }) =>
+    ({ id: newId(), kind: 'custom', name: String(name), price: Math.max(0, Math.round(+price || 0)), qty, notes: String(notes || ''), category });
 
   // What the screens show for an item: its rules line and description.
   function describe(item) {
@@ -141,30 +142,65 @@
   const pack = shop => JSON.stringify([1, shop.name || '', shop.type || '', shop.level || 1, +shop.adjust || 0,
     shop.items.filter(i => i.qty > 0).map(i => i.kind === 'custom' ? [KINDS.custom, '', 0, '', i.qty, i.price, i.name, i.notes || '', i.category || '']
       : [KINDS[i.kind], i.base, i.tier || 0, i.material || '', i.qty])]);
+  // A link is outside input: anyone can write one. unpack() takes nothing on trust. Every value is checked
+  // against the item data or forced to a plain number or a short string, and unknown items are dropped.
+  const LIMITS = { code: 20000, text: 200000, items: 200, name: 80, notes: 300, qty: 999, price: 10000000 };
+  const str = (v, max) => (typeof v === 'string' ? v : '').slice(0, max);
+  const int = (v, lo, hi, fallback) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, Math.round(+v))) : fallback);
   function unpack(text) {
-    const [v, name, type, level, adjust, rows] = JSON.parse(text);
-    if (v !== 1 || !Array.isArray(rows)) throw new Error('Not a Primordium shop.');
-    const items = rows.map(([k, base, tier, material, qty, price, nm, notes, category]) => {
-      const kind = KIND_OF[k];
-      const it = kind === 'gear' && GEAR[base] ? gear(base, tier, material, qty) : kind === 'consumable' && CONS[base] ? consumable(base, qty)
-        : kind === 'other' && OTHER[base] ? other(base, qty) : kind === 'custom' ? custom({ name: nm, price, qty, notes, category }) : null;
-      return it;
+    let data;
+    try { data = JSON.parse(text); } catch (e) { data = null; }
+    if (!Array.isArray(data) || data[0] !== 1 || !Array.isArray(data[5])) throw new Error('Not a Primordium shop.');
+    const [, name, type, level, adjust, rows] = data;
+    const items = rows.slice(0, LIMITS.items).map(row => {
+      if (!Array.isArray(row)) return null;
+      const [k, base, tier, material, qty, price, nm, notes, category] = row;
+      const kind = Object.hasOwn(KIND_OF, k) ? KIND_OF[k] : null, n = int(qty, 1, LIMITS.qty, 1);
+      if (kind === 'gear' && Object.hasOwn(GEAR, base)) {
+        const t = int(tier, 0, GEAR[base].prices.length - 1, 0);
+        return gear(base, t, materialsFor(base, t).some(m => m.name === material) ? material : '', n);
+      }
+      if (kind === 'consumable' && Object.hasOwn(CONS, base)) return consumable(base, n);
+      if (kind === 'other' && Object.hasOwn(OTHER, base)) return other(base, n);
+      if (kind === 'custom' && str(nm, LIMITS.name).trim()) return custom({ name: str(nm, LIMITS.name).trim(), price: int(price, 0, LIMITS.price, 0), qty: n,
+        notes: str(notes, LIMITS.notes), category: ['weapon', 'armor'].includes(category) ? category : '' });
+      return null;
     }).filter(Boolean);
-    return { name, type, level, adjust, items };
+    return { name: str(name, LIMITS.name) || 'Shop', type: str(type, LIMITS.name), level: int(level, 1, 99, 1), adjust: int(adjust, -90, 900, 0), items };
   }
   const toB64 = bytes => { let s = ''; bytes.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
   const fromB64 = str => Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-  const pipe = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+  // Runs bytes through a (de)compression stream, stopping early if the result passes max bytes (a small link
+  // must not unpack into something huge).
+  async function pipe(bytes, stream, max = Infinity) {
+    const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader(), chunks = [];
+    let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > max) { reader.cancel(); throw new Error('This shop link is too large.'); }
+      chunks.push(value);
+    }
+    const out = new Uint8Array(size);
+    let at = 0;
+    for (const c of chunks) { out.set(c, at); at += c.length; }
+    return out;
+  }
   // "z" marks a deflated code, "j" a plain one (browsers without CompressionStream).
   async function encodeShop(shop) {
     const bytes = new TextEncoder().encode(pack(shop));
     if (typeof CompressionStream === 'function') return 'z' + toB64(await pipe(bytes, new CompressionStream('deflate')));
     return 'j' + toB64(bytes);
   }
+  // Throws when the code is not a shop (damaged, too large, or not ours).
   async function decodeShop(code) {
+    code = String(code || '');
+    if (!/^[zj][A-Za-z0-9_-]+$/.test(code) || code.length > LIMITS.code) throw new Error('Not a Primordium shop.');
     const bytes = fromB64(code.slice(1));
-    const text = code[0] === 'z' ? new TextDecoder().decode(await pipe(bytes, new DecompressionStream('deflate'))) : new TextDecoder().decode(bytes);
-    return unpack(text);
+    const plain = code[0] === 'z' ? await pipe(bytes, new DecompressionStream('deflate'), LIMITS.text) : bytes;
+    if (plain.length > LIMITS.text) throw new Error('This shop link is too large.');
+    return unpack(new TextDecoder().decode(plain));
   }
 
   root.PrimordiumItems = {

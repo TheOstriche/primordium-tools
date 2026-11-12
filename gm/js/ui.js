@@ -36,7 +36,7 @@
 
   function toast(message, kind) {
     let box = document.getElementById('toasts');
-    if (!box) document.body.append(box = h('div', { id: 'toasts' }));
+    if (!box) document.body.append(box = h('div', { id: 'toasts', role: 'status', 'aria-live': 'polite' }));
     const t = h('div.toast' + (kind ? '.' + kind : ''), message);
     box.append(t);
     setTimeout(() => t.remove(), 3500);

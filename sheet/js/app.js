@@ -114,11 +114,12 @@ const ACTS = {
     FX.mood('rest');
   },
   leaveshop() { shopVisit = null; history.replaceState(null, '', location.pathname + location.search); listView(); },
+  shoplink() { $('#menu').close(); askShopLink(); },
   delete() {
     if (!confirm(`Delete ${current.name || 'this character'}? This can not be undone unless you have a backup.`)) return;
     delete db[current.id];
     saveNow();
-    listView();
+    leave();
   }
 };
 
@@ -128,7 +129,7 @@ const TAPS = [
   ['add', d => { tray.pool.push(Number(d.add)); charView(current.id); }],
   ['mod', d => { tray.mod += Number(d.mod); charView(current.id); }],
   ['qroll', d => quickRoll(d.qroll, d.stat)],
-  ['open', d => charView(d.open, 'overview')],
+  ['open', d => { enter(); charView(d.open, 'overview'); }],
   ['delchar', d => {
     const c = db[d.delchar];
     if (confirm(`Delete ${c.name || 'this character'}? This can not be undone unless you have a backup.`)) { delete db[d.delchar]; saveNow(); toast([`Deleted ${c.name || 'character'}`]); }
@@ -217,7 +218,7 @@ document.addEventListener('change', e => {
 
 /* ---------- forms ---------- */
 const FORMS = {
-  newForm() { const c = blank($('#newName').value.trim()); db[c.id] = c; saveNow(); charView(c.id, 'sheet'); },
+  newForm() { const c = blank($('#newName').value.trim()); db[c.id] = c; saveNow(); enter(); charView(c.id, 'sheet'); },
   itemForm() {
     const name = $('#itemName').value.trim();
     current.items.push({ id: uid(), name, desc: $('#itemDesc').value.trim(), qty: Math.max(1, n($('#itemQty').value)), equipped: false });
@@ -251,7 +252,20 @@ document.addEventListener('submit', e => {
 });
 
 /* ---------- the ⋯ menu: backups and effects ---------- */
-$('#backBtn').onclick = () => { saveNow(); if (shopVisit && !current) return ACTS.leaveshop(); listView(); };
+// The phone's own Back button works like the ‹ button: opening a character adds one step to the browser's
+// history, and going back (either way) returns to the list instead of leaving the app.
+let inside = false;
+function enter() { if (!inside) { history.pushState({ primordium: 'character' }, ''); inside = true; } }
+function leave() { if (inside) history.back(); else listView(); }
+window.addEventListener('popstate', () => {
+  if (!inside) return;
+  inside = false;
+  saveNow();
+  if (sheet.open) sheet.close();
+  listView();
+});
+$('#backBtn').onclick = () => { saveNow(); if (shopVisit && !current) return ACTS.leaveshop(); leave(); };
+$('#shopLinkBtn').onclick = ACTS.shoplink;
 // Effects settings: markup and saving in ../shared/fx.js, the same rows as the Codex.
 $('#menuBtn').onclick = () => { $('#fxPrefs').innerHTML = FX.settingsHTML(); $('#menu').showModal(); };
 $('#fxPrefs').onclick = e => FX.settingsClick(e, $('#fxPrefs'));
@@ -265,10 +279,12 @@ $('#exportBtn').onclick = () => {
 };
 $('#importFile').onchange = async e => {
   try {
-    const data = JSON.parse(await e.target.files[0].text());
-    const chars = Object.entries(data || {}).filter(([, c]) => c && typeof c === 'object' && typeof c.name === 'string');
+    const chars = Object.values(adopt(JSON.parse(await e.target.files[0].text())));
     if (!chars.length) throw new Error('no characters');
-    chars.forEach(([id, c]) => db[id] = c);
+    // A character already on this phone is replaced by the backup's copy: say so first.
+    const replaced = chars.filter(c => db[c.id]);
+    if (replaced.length && !confirm(`Replace ${replaced.map(c => c.name || 'Unnamed').join(', ')} with the backup's ${replaced.length === 1 ? 'copy' : 'copies'}?`)) return void (e.target.value = '');
+    chars.forEach(c => db[c.id] = upgrade(c));
     saveNow();
     $('#menu').close();
     listView();
@@ -281,6 +297,16 @@ $('#importFile').onchange = async e => {
 
 document.addEventListener('toggle', e => { const g = e.target.dataset?.group; if (g) e.target.open ? openGroups.add(g) : openGroups.delete(g); }, true);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+// Ask the browser to keep saved characters even when the phone runs low on space (granted quietly or not at all).
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+// The sheet open twice (a tab and the installed app, or two tabs): take the other one's saved changes.
+window.addEventListener('storage', e => {
+  if (e.key !== KEY || saveTimer) return;
+  db = load();
+  if ($('#sheet').open) return;
+  if (current && db[current.id]) charView(current.id); else if (shopVisit) shopView(); else listView();
+});
 listView();
+if (saveProblem) toast(['Saved data problem', saveProblem]);
 openShopLink();   // a shop link (#shop=…) opens the shop over the list (js/shop.js)
-window.addEventListener('hashchange', openShopLink);
+window.addEventListener('hashchange', async () => { if (!(await openShopLink()) && shopVisit && !current) { shopVisit = null; listView(); } });

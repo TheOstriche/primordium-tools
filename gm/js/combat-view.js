@@ -40,7 +40,9 @@
   const FX = window.PrimordiumFX || null;
   function act(fn) {
     const cb = combat(), was = cb ? new Map(cb.combatants.map(c => [c.id, { dead: !!c.dead, down: Combat.isDowned(c) }])) : new Map();
+    const before = cb ? JSON.stringify(cb) : null;
     fn();
+    if (before && combat() && JSON.stringify(combat()) !== before) remember(before);
     Store.changed();
     refresh();
     if (!FX || !cb) return;
@@ -50,6 +52,34 @@
       else if (Combat.isDowned(c) && !w.down) FX.hp('down');
     }
   }
+
+  // ---------- Undo ----------
+  // Every change made through act() can be taken back: the combat as it was is kept (as text) before each one.
+  // Kept for this visit only; a new or finished combat starts the list again.
+  const UNDO_LIMIT = 50;
+  let undoStack = [];
+  function remember(before) {
+    undoStack.push(before);
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  }
+  function undo() {
+    const cb = combat();
+    if (!cb || !undoStack.length) return;
+    const was = JSON.parse(undoStack.pop());
+    if (was.id !== cb.id) { undoStack = []; return; }
+    S().combat = was;
+    plan = null; report = null;
+    Store.changed();
+    refresh();
+    toast('Undone.');
+  }
+  // Ctrl+Z (or Cmd+Z) on the Combat tab, unless a text box is in use (it keeps its own undo).
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+    if (!root || !root.classList.contains('active') || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    e.preventDefault();
+    undo();
+  });
 
   // ---------- Top level ----------
 
@@ -124,7 +154,7 @@
     const cb = Combat.fromEncounter(enc, S().players);
     autoPlace(cb, mapOf(cb));
     S().combat = cb;
-    selectedId = null; plan = null; report = null; ending = false; ambush = ''; openMenu = null;
+    selectedId = null; plan = null; report = null; ending = false; ambush = ''; openMenu = null; undoStack = [];
     Store.changed();
     render(root);
     fitToScreen();
@@ -186,6 +216,7 @@
       cb.phase > 0 && !atEnd ? h('button.primary', { onclick: nextTurn }, 'Next turn') : null,
       cb.phase > 0 ? h(atEnd ? 'button.primary' : 'button.ghost', { onclick: endPhase }, 'End phase') : null,
       h('span.spacer'),
+      h('button.ghost', { onclick: undo, disabled: !undoStack.length, title: 'Take back the last change (Ctrl+Z)' }, 'Undo'),
       h('button' + (ruler ? '.on' : ''), { onclick: () => { ruler = !ruler; refresh(); }, title: 'Press and drag on the grid to measure' }, 'Ruler'),
       mapSettings(cb),
       addNpcControl(cb),
@@ -832,7 +863,7 @@
 
   function finishCombat(message) {
     S().combat = null;
-    ending = false; plan = null; report = null; selectedId = null;
+    ending = false; plan = null; report = null; selectedId = null; undoStack = [];
     Store.changed();
     toast(message, 'good');
     render(root);

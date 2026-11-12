@@ -22,7 +22,7 @@ Creature families that are not yet in `codex-data.js` → `creatureFamilies` (Bo
 
 ## Publishing changes
 
-When you change any file here or anything in `../shared/` that the Codex loads, raise the version in `sw.js` (for example `codex-v4` to `codex-v5`) so installed phones fetch the new copy, and keep its file list matching what `index.html` loads.
+When you change any file here or anything in `../shared/` that the Codex loads, run `node tools/stamp-offline.js` from the top folder. It raises the version in `sw.js` so installed phones download the new files (the tests check it was done).
 
 ## Checking a new guide export
 

@@ -26,7 +26,7 @@ Characters are stored on each phone. Use **⋯ → Export all characters** to sa
 
 ## Publishing changes
 
-When you change any file here or anything it loads from `../shared/`, raise the version in `sw.js` (for example `primordium-v11` to `primordium-v12`) and keep its file list matching what `index.html` loads. That tells installed phones to download the new version instead of using the cached one.
+When you change any file here or anything it loads from `../shared/`, run `node tools/stamp-offline.js` from the top folder. It raises the version in `sw.js`, which tells installed phones to download the new version instead of using the saved one. Keep the file list in `sw.js` matching what `index.html` loads (the tests check both).
 
 ## Files
 

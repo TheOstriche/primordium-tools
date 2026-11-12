@@ -36,6 +36,7 @@
       if (e.target.dataset.view) show(e.target.dataset.view);
     });
     document.getElementById('save-status').addEventListener('click', () => show('save'));
+    Store.onError(message => document.querySelector('main').prepend(UI.h('p.error', { role: 'alert' }, message)));
     Store.onChange(refreshSaveStatus);
     refreshSaveStatus();
     let first = 'encounter';

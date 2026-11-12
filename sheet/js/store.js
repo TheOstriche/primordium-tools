@@ -12,13 +12,47 @@ const n = v => Number(v) || 0;
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 /* ---------- saving ---------- */
-const KEY = 'primordium.characters.v1';
-function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+const KEY = 'primordium.characters.v1', DAMAGED_KEY = 'primordium.characters.damaged';
+// Ids end up inside HTML attributes, and a backup file can come from anywhere, so only plain ids are kept.
+const safeId = v => (typeof v === 'string' && /^[\w-]{1,40}$/.test(v) ? v : uid());
+// Characters from saved text or a backup file: { id: character }, keeping only real characters, each under a plain id.
+function adopt(data) {
+  const out = {};
+  for (const c of Object.values(data && typeof data === 'object' ? data : {})) {
+    if (!c || typeof c !== 'object' || typeof c.name !== 'string') continue;
+    c.id = safeId(c.id);
+    for (const list of [c.items, c.aug]) if (Array.isArray(list)) list.forEach(x => { if (x && typeof x === 'object') x.id = safeId(x.id); });
+    out[c.id] = c;
+  }
+  return out;
+}
+let saveProblem = '';   // shown once the page has drawn (app.js)
+function load() {
+  let text = null;
+  try { text = localStorage.getItem(KEY); } catch (e) { saveProblem = 'This browser is blocking saved data, so characters will not be kept.'; }
+  if (!text) return {};
+  try { return adopt(JSON.parse(text)); } catch (e) {
+    // Saved characters that can not be read: keep the text aside before anything writes over it.
+    try { localStorage.setItem(DAMAGED_KEY, text); } catch (e2) { /* nothing more to do */ }
+    saveProblem = 'Your saved characters could not be read. A copy was kept; import a backup to restore them.';
+    return {};
+  }
+}
 let db = load();
-let saveTimer;
+let saveTimer, saveFailed = false;
 // Typing saves a moment later, so a burst of edits is one write.
 function save() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 250); }
-function saveNow() { clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* storage full or blocked */ } }
+function saveNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  try { localStorage.setItem(KEY, JSON.stringify(db)); saveFailed = false; } catch (e) {
+    if (!saveFailed) toast(['Changes are not being saved', 'Storage on this phone is full or blocked. Export a backup from the ⋯ menu.']);
+    saveFailed = true;
+  }
+}
+// The phone may close the app without warning: write any waiting change as soon as the page is hidden.
+const flushSave = () => { if (saveTimer) saveNow(); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+window.addEventListener('pagehide', flushSave);
 
 /* ---------- what is on screen ---------- */
 let current = null;              // the open character (null on the list)
@@ -43,6 +77,9 @@ function blank(name) {
 
 // Characters saved by earlier versions: fill in missing fields and move old layouts to the current one.
 function upgrade(c) {
+  if (!c.stats || typeof c.stats !== 'object') c.stats = {};
+  if (c.items && !Array.isArray(c.items)) c.items = [];
+  if (c.aug && !Array.isArray(c.aug)) c.aug = [];
   c.trin ??= { dmg: '', a: '', b: '' };
   c.armorOther ??= n(c.armor);
   c.skills ??= {};

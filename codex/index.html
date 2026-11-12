@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Only this site's own scripts may run; fonts come from Google Fonts. A second guard behind the escaping in the code. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#121019">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,7 +30,7 @@
       <button class="clear" id="qclear" hidden>Clear</button>
     </label>
   </header>
-  <main id="view" aria-live="polite"></main>
+  <main id="view"></main>
 </div>
 
 <div class="roll-toast" id="toast" role="status"><div class="total" id="t-total">–</div><div class="what" id="t-what"></div></div>

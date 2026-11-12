@@ -11,10 +11,11 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
   '.md': 'text/plain' };
 
 http.createServer((req, res) => {
-  const urlPath = decodeURIComponent(req.url.split('?')[0]);
+  let urlPath;
+  try { urlPath = decodeURIComponent(req.url.split('?')[0]); } catch (e) { res.writeHead(400); return res.end('Bad request'); }
   // Like GitHub Pages: a folder without its trailing slash redirects, and a folder serves its index.html.
   const target = path.join(root, urlPath);
-  if (!target.startsWith(root)) { res.writeHead(403); return res.end(); }
+  if (target !== root && !target.startsWith(root + path.sep)) { res.writeHead(403); return res.end(); }
   if (!urlPath.endsWith('/') && fs.existsSync(target) && fs.statSync(target).isDirectory()) {
     res.writeHead(301, { Location: urlPath + '/' });
     return res.end();

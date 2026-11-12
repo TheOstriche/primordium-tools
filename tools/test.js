@@ -5,7 +5,9 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 
 const suites = [
+  ['Project (scripts parse, pages load real files, offline lists and versions)', 'node', ['tools/test-project.js']],
   ['Shared core (rule tables, helpers)', 'node', ['tools/test-core.js']],
+  ['Character rules (skills granted, HP, armor)', 'node', ['tools/test-character.js']],
   ['Stored data (names, values, cross-links)', 'node', ['tools/test-data.js']],
   ['Tactical deck', 'node', ['tools/test-deck.js']],
   ['Items and shops', 'node', ['tools/test-items.js']],
