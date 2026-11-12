@@ -1,19 +1,20 @@
 # Primordium Tools
 
-Three apps for Primordium 2.0 that share one copy of the game's rules and data, and one look (light or dark).
+Four apps for Primordium 2.0 that share one copy of the game's rules and data, and one look (light or dark).
 
 | Folder | What it is | Live link |
 |---|---|---|
 | `sheet/` | Player character sheet (phone app, works offline) | https://theostriche.github.io/primordium-tools/sheet/ |
 | `gm/` | GM tool: combat, encounters, shops (laptop) | https://theostriche.github.io/primordium-tools/gm/ |
 | `codex/` | Rules reference: skills, creatures, rules, dice, and the tactical deck (phone app, works offline) | https://theostriche.github.io/primordium-tools/codex/ |
-| `shared/` | What all of them use: rule tables, game data, the deck, dice, effects, and the look | |
+| `map/` | World map: explore it and build it out (laptop) | https://theostriche.github.io/primordium-tools/map/ |
+| `shared/` | What all of them use: rule tables, game data, the world map, the deck, dice, effects, and the look | |
 
-The site's front page (`index.html`) links to all three. How everything fits together, file by file, is in `ARCHITECTURE.md`.
+The site's front page (`index.html`) links to all four. How everything fits together, file by file, is in `ARCHITECTURE.md`.
 
 ## Light and dark
 
-Every app follows your device's light or dark setting. The round button at the top of each app switches between **System**, **Light**, and **Dark**; the choice is remembered and shared by all three apps on that device.
+Every app follows your device's light or dark setting. The round button at the top of each app switches between **System**, **Light**, and **Dark**; the choice is remembered and shared by every app on that device.
 
 ## Changing the game data
 
@@ -23,16 +24,20 @@ Every app follows your device's light or dark setting. The round button at the t
 
 Edit once and every app picks it up. Then run `node tools/stamp-offline.js`: it raises the version in `sheet/sw.js` and `codex/sw.js` where needed, so installed phones download the new files.
 
-To change the data with Claude, run `node tools/export-handoffs.js`. It writes `exports/handoff/`: one file each for creatures, skills, races and traits, the shared rule tables, items, the Codex's rules text, and the GM tool's rulings and scaling. Each holds the current data, its exact format and rules, and how Claude Code brings a change in. Put those files in your Claude project; paste Claude's answers into Claude Code; then run the export again and refresh the project.
+To change the data with Claude, run `node tools/export-handoffs.js`. It writes `exports/handoff/`: one file each for creatures, skills, races and traits, the shared rule tables, items, the world map, the Codex's rules text, and the GM tool's rulings and scaling. Each holds the current data, its exact format and rules, and how Claude Code brings a change in. Put those files in your Claude project; paste Claude's answers into Claude Code; then run the export again and refresh the project.
+
+## The world map
+
+The map is one data file, `shared/map/primordium-map.json`. Open the map app (`map/index.html`, or the World Map card on the front page), change the map, and press **Save**: the first time it asks you to choose the `shared/map` folder, and from then on it writes the map straight into it. Then commit with GitHub Desktop as usual. More in `map/README.md`.
 
 ## Opening the apps on this computer
 
-- **GM tool:** double-click `gm/index.html`.
+- **GM tool:** double-click `gm/index.html`. **World map:** double-click `map/index.html`.
 - **All apps the way the website serves them:** run `node tools/serve.js` in this folder, then visit http://localhost:8080.
 
 ## Checking everything still works
 
-Run `node tools/test.js` (or `npm test`). GitHub also runs it on every push (`.github/workflows/test.yml`) and emails you if something fails. It checks the shared rule tables, the tactical deck at every Tactics level, items, shop links, and QR codes, the GM tool's game math and combat rules, and (if Python is installed) the Codex's guide parser.
+Run `node tools/test.js` (or `npm test`). GitHub also runs it on every push (`.github/workflows/test.yml`) and emails you if something fails. It checks the shared rule tables, the tactical deck at every Tactics level, items, shop links, and QR codes, the world map, the GM tool's game math and combat rules, and (if Python is installed) the Codex's guide parser.
 
 ## Publishing
 
@@ -40,7 +45,7 @@ Run `node tools/test.js` (or `npm test`). GitHub also runs it on every push (`.g
 2. One-time setup: on GitHub, open the repository's **Settings → Pages**, set **Source** to *Deploy from a branch*, choose `main` and `/ (root)`, and save.
 3. After about a minute the links above are live.
 
-More details for each app are in `gm/README.md`, `sheet/README.md`, and `codex/README.md`.
+More details for each app are in `gm/README.md`, `map/README.md`, `sheet/README.md`, and `codex/README.md`.
 
 ## The old player sheet link
 

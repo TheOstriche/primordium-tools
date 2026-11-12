@@ -10,7 +10,7 @@ const walk = dir => fs.readdirSync(path.join(root, dir), { withFileTypes: true }
   e.isDirectory() ? walk(dir + '/' + e.name) : [dir + '/' + e.name]);
 
 /* ---------- every script parses ---------- */
-const scripts = ['shared', 'sheet', 'codex', 'gm', 'tools'].flatMap(walk).filter(f => f.endsWith('.js'));
+const scripts = ['shared', 'sheet', 'codex', 'gm', 'map', 'tools'].flatMap(walk).filter(f => f.endsWith('.js'));
 const broken = scripts.filter(f => { try { new vm.Script(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f }); return false; } catch (e) { return true; } });
 check(!broken.length, `${scripts.length} scripts parse`, broken);
 
@@ -21,7 +21,7 @@ function loadedBy(page) {
   const refs = [...html.matchAll(/<(?:script|link)\b[^>]*?\b(?:src|href)="([^"]+)"/g)].map(m => m[1]).filter(u => !/^(https?:|data:|#)/.test(u));
   return { html, files: [...new Set(refs.map(u => path.posix.join(dir, u.split(/[?#]/)[0])))] };
 }
-const PAGES = { 'index.html': null, 'sheet/index.html': 'sheet', 'codex/index.html': 'Codex', 'gm/index.html': null };
+const PAGES = { 'index.html': null, 'sheet/index.html': 'sheet', 'codex/index.html': 'Codex', 'gm/index.html': null, 'map/index.html': null };
 for (const [page, phoneApp] of Object.entries(PAGES)) {
   const { html, files } = loadedBy(page);
   check(files.every(exists), `${page}: every file it loads exists (${files.length})`, files.filter(f => !exists(f)));

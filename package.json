@@ -1,11 +1,12 @@
 {
   "name": "primordium-tools",
   "private": true,
-  "description": "Character sheet, Codex, and GM tool for the Primordium 2.0 tabletop RPG. Static files, no build step, no dependencies.",
+  "description": "Character sheet, Codex, GM tool, and world map for the Primordium 2.0 tabletop RPG. Static files, no build step, no dependencies.",
   "scripts": {
     "test": "node tools/test.js",
     "serve": "node tools/serve.js",
     "stamp": "node tools/stamp-offline.js",
-    "handoffs": "node tools/export-handoffs.js"
+    "handoffs": "node tools/export-handoffs.js",
+    "map": "node tools/build-map.js"
   }
 }
