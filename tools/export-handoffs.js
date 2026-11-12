@@ -554,10 +554,10 @@ The current map ${problems.length ? 'has these problems: ' + problems.map(p => p
 
 ## The map app (\`map/\`), as built
 
-- **Drawing:** layered SVG generated from the data: roughened coasts with shallow-water bands, feathered terrain with patterns, seeded trees and peaks, tapered rivers, roads, dotted borders, settlement icons, lettering, a compass, a scale bar and a frame. Small towns, minor roads and small labels appear as you zoom in.
-- **Editing:** click to select (again for what is beneath), drag handles to reshape, halfway handles add points, drag settlements and labels, draw new features of every kind, bend roads with \`via\` points, reorder terrain areas, undo and redo, and a details panel for every field including notes.
-- **Finding and checking:** a searchable list of every feature, layer switches, and a Checks tab that lists problems and jumps to them.
-- **Measuring:** a distance tool (map units until the scale is decided).
+- **Drawing:** generated from the data. The land is painted: terrain areas blend into each other along soft, ragged edges (their outlines only need to be roughly right), with texture, rocky ground under mountain ranges, pale strands along shores, and small marks (dunes, tufts, reeds, cracks). Over it: roughened coasts with shallow-water bands, seeded trees that thin toward the edge of a wood, peaks, tapered rivers, roads, border lines (dash and dot, with a soft band), settlement icons, lettering, a compass and a frame.
+- **Detail with zoom:** small towns, minor roads and small labels appear as you zoom in, the ground gains finer texture and marks, and realm names fade when close.
+- **Looking:** the map fills the window and opens read-only. Search by name, id, type or notes; point at a feature for its name; click it for a card with its notes; measure distances; copy a link that opens the same spot and zoom. It also works on a phone.
+- **Editing** (the Edit switch): click to select (again for what is beneath), drag handles to reshape, halfway handles add points, drag settlements and labels, draw new features of every kind, bend roads with \`via\` points, reorder terrain areas, undo and redo, a details form for every field including notes, a list of every feature, layer switches, and a Checks tab that lists problems and jumps to them.
 - **Saving:** Save writes \`primordium-map.json\` and \`map-data.js\` into the repository's \`shared/map\` folder (Chrome or Edge). Unsaved edits are kept in the browser.
 - **In and out:** open or download the map file, "Copy changes for the Claude project" and "Apply changes from the Claude project" (the format below), and PNG or SVG export for printing or the GM tool's map backdrop.
 

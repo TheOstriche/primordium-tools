@@ -28,7 +28,8 @@
   // The field holding each kind's type, and the types the renderer knows how to draw.
   const TYPE_FIELD = { biomes: 'type', ranges: 'type', settlements: 'type', labels: 'kind' };
   const TYPES = {
-    biomes: ['plains-dry', 'sand', 'mesa', 'obsidian', 'scar', 'rock', 'ice', 'darkforest', 'desert', 'ash', 'forest', 'tundra', 'swamp', 'grass'],
+    biomes: ['plains-dry', 'sand', 'mesa', 'obsidian', 'scar', 'rock', 'ice', 'darkforest', 'desert', 'ash', 'forest', 'tundra', 'swamp', 'grass',
+      'hills', 'scrub', 'savanna', 'farmland', 'marsh', 'jungle', 'badlands', 'snow'],
     ranges: ['mountain', 'snow', 'volcano', 'butte'],
     settlements: ['capital', 'city', 'town', 'port', 'fort', 'ruin'],
     labels: ['realm', 'feature', 'sea']

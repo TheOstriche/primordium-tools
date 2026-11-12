@@ -8,22 +8,30 @@ Double-click `map/index.html`, or use the **World Map** card on the front page. 
 
 ## Looking around
 
-- **Scroll** to zoom. **Drag** empty space to move the map (or hold **Space** and drag anywhere).
-- Small towns, minor roads, and small labels appear as you zoom in. The **Layers** tab switches each kind of thing on or off.
-- **Measure** (or the M key): click along a route to see how long it is. It shows map units until you set a scale.
-- The **Features** tab lists everything on the map. Type in the box to find something by name, id, type, or notes; click a row to go to it.
+The map fills the window, and it opens ready for looking, so nothing can be moved by accident.
+
+- **Scroll** (or double-click, or pinch on a phone) to zoom. **Drag** to move the map.
+- The closer you look, the more you see: small towns, minor roads, and small labels appear, the ground gains texture and marks, and the big realm names fade out of the way.
+- **Search** (top left, or press /): type a name, id, type, or a word from a feature's notes, then pick a result to go there.
+- **Point** at anything to see its name. **Click** it for a card with its notes. If something else is on top, click the same spot again.
+- **Measure** (or the M key): click along a route to see how long it is. It shows map units until you set a scale. The bar at the bottom left shows distance at the current zoom.
+- **Browse** opens a panel with every feature (**Features**), what the map shows (**Layers**), and the map's problems (**Checks**).
+- **More → Copy a link to this view** gives a link that opens the map at the same spot and zoom. Good for pointing players at a place.
 
 ## Changing the map
 
-- **Click** a feature to select it. If something else is on top, click the same spot again to get the one beneath.
+Press **Edit** (top right). It turns to **Editing**, and Add, Undo, Redo, and Save appear. Press it again to go back to looking.
+
+- **Click** a feature to select it. Its details open on the right, where you can change its name, type, notes, and more.
 - **Drag the round handles** to reshape a coast, area, river, range, or border. The small handles halfway along each edge add a point when you drag them.
 - **Alt+click** or right-click a handle to remove that point. **Shift+click** the map to add a point to the selected shape.
 - **Ctrl+drag** a selected shape to move all of it. Drag a selected settlement or label to move it; the arrow keys nudge it.
 - **Add** draws something new: click the points, then press **Enter** (or double-click) to finish. **Esc** cancels.
 - A road joins two settlements. Select it and drag its halfway handle to bend it, for example through a mountain pass.
-- The panel on the right holds the selected feature's name, type, notes, and other details. With nothing selected it shows the map's own details, including the **scale**.
+- **Terrain areas** blend into whatever is next to them, so their outlines only need to be roughly right. Later areas in the list paint over earlier ones (**Bring forward** / **Send back**). Types you can choose include hills, scrub, savanna, farmland, marsh, jungle, badlands, and snow as well as the ones the map uses now.
+- **More → Map details and scale** sets the map's name, version, and **scale**.
 - **Ctrl+Z** undoes, **Ctrl+Y** redoes, **Delete** removes the selection.
-- The **Checks** tab lists problems (a settlement in the sea, a river that ends on dry land, a road to nowhere). Click one to go to it.
+- The **Checks** tab (in Browse) lists problems (a settlement in the sea, a river that ends on dry land, a road to nowhere). Click one to go to it.
 
 ## Saving
 

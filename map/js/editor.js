@@ -1,4 +1,6 @@
 // Working on the map with the mouse and keyboard: selecting, reshaping, drawing new features, measuring.
+// There are two modes. Looking (the default) only selects, pans, zooms and measures, so nothing can be moved by
+// accident. Editing adds everything below that changes the map.
 //
 //   Click            select what is under the pointer; click the same spot again for the thing beneath it
 //   Drag             empty space pans; a selected settlement or label moves; a handle reshapes
@@ -14,10 +16,10 @@
   'use strict';
   const PM = window.PrimordiumMap, V = window.MapView, S = window.MapStore, { toast } = window.MapUI;
   const r1 = n => Math.round(n * 10) / 10;
-  const listeners = { select: [], cursor: [], tool: [] };
+  const listeners = { select: [], cursor: [], tool: [], hover: [], mode: [] };
   const emit = (name, arg) => listeners[name].forEach(fn => fn(arg));
 
-  let svg, overlay, vis = {}, sel = null, tool = null, press = null, cursor = [0, 0], spaceDown = false;
+  let svg, overlay, vis = {}, sel = null, tool = null, press = null, cursor = [0, 0], spaceDown = false, editing = false, hoverFrame = 0;
 
   const feature = () => (sel ? PM.find(S.map, sel.kind, sel.id) : null);
   const shape = kind => PM.KINDS[kind].shape;
@@ -49,7 +51,7 @@
     if (sel && opts && opts.fly) {
       const b = PM.bounds(S.map, sel.kind, feature());
       // Small things are shown with some of the country around them, not filling the screen.
-      if (b) { const gx = Math.max(0, 260 - (b[2] - b[0])) / 2, gy = Math.max(0, 200 - (b[3] - b[1])) / 2; V.fit([b[0] - gx, b[1] - gy, b[2] + gx, b[3] + gy], 0.6); }
+      if (b) { const gx = Math.max(0, 260 - (b[2] - b[0])) / 2, gy = Math.max(0, 200 - (b[3] - b[1])) / 2; V.fit([b[0] - gx, b[1] - gy, b[2] + gx, b[3] + gy], 0.6, true); }
     }
     draw();
     emit('select', sel);
@@ -68,11 +70,11 @@
         s += `<path class="ol-case" d="${d}"/><path class="ol" d="${d}"/>`;
         // Halfway handles, only where the edge is long enough on screen to grab one.
         const n = ed.line.length;
-        for (let i = 0, segs = ed.closed ? n : n - 1; i < segs; i++) {
+        if (editing) for (let i = 0, segs = ed.closed ? n : n - 1; i < segs; i++) {
           const a = ed.line[i], b = ed.line[(i + 1) % n], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
           if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 30 * u && inView(mid)) s += `<circle class="hd mid" data-m="${i}" cx="${mid[0]}" cy="${mid[1]}" r="${3.2 * u}"/>`;
         }
-        ed.pts.forEach((p, i) => { if (inView(p)) s += `<circle class="hd${i === 0 && sel.kind === 'rivers' ? ' first' : ''}" data-i="${i}" cx="${p[0]}" cy="${p[1]}" r="${4.6 * u}"/>`; });
+        if (editing) ed.pts.forEach((p, i) => { if (inView(p)) s += `<circle class="hd${i === 0 && sel.kind === 'rivers' ? ' first' : ''}" data-i="${i}" cx="${p[0]}" cy="${p[1]}" r="${4.6 * u}"/>`; });
       } else if (sel.kind === 'labels') {
         const z = PM.labelSize(f);
         s += `<rect class="ol-case" x="${f.x - z.w / 2}" y="${f.y - z.h / 2}" width="${z.w}" height="${z.h}" transform="rotate(${f.rot || 0} ${f.x} ${f.y})"/><rect class="ol" x="${f.x - z.w / 2}" y="${f.y - z.h / 2}" width="${z.w}" height="${z.h}" transform="rotate(${f.rot || 0} ${f.x} ${f.y})"/>`;
@@ -165,13 +167,24 @@
   }
 
   /* ---------- pointer ---------- */
+  // Two fingers: pinch to zoom and drag to pan together.
+  const touches = new Map();
+  let pinch = null;
+  const pinchState = () => { const [a, b] = [...touches.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
   function onDown(e) {
     if (e.button === 2) return;
     svg.setPointerCapture(e.pointerId);
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) {
+      if (press && press.moved && press.mode !== 'pan') S.end();
+      press = null;
+      pinch = pinchState();
+      return;
+    }
     const m = V.toMap(e.clientX, e.clientY);
     press = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, start: m, mode: 'click', moved: false };
     if (e.button === 1 || spaceDown) { press.mode = 'pan'; press.panOnly = true; e.preventDefault(); return; }
-    if (tool) return;
+    if (tool || !editing) return;
     const hd = e.target.closest ? e.target.closest('.hd') : null, f = feature();
     if (hd && f) {
       if (e.altKey && hd.dataset.i != null) { removePoint(+hd.dataset.i); press = null; return; }
@@ -185,10 +198,24 @@
     }
   }
   function onMove(e) {
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && touches.size === 2) {
+      const now = pinchState();
+      V.panBy(now.x - pinch.x, now.y - pinch.y);
+      V.zoomAt(now.x, now.y, now.d / pinch.d);
+      pinch = now;
+      return;
+    }
     const m = V.toMap(e.clientX, e.clientY);
     cursor = m;
     emit('cursor', m);
-    if (!press) { if (tool && tool.pts && tool.pts.length) draw(); return; }
+    if (!press) {
+      if (tool && tool.pts && tool.pts.length) draw();
+      // Say what is under the pointer (a few times a second is plenty).
+      if (!tool && !hoverFrame) hoverFrame = setTimeout(() => { hoverFrame = 0; if (!press && !tool && !V.moving()) emit('hover', { hit: hits(cursor)[0] || null, x: e.clientX, y: e.clientY }); }, 40);
+      return;
+    }
+    emit('hover', { hit: null });
     if (!press.moved) {
       if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < 4) return;
       press.moved = true;
@@ -218,6 +245,8 @@
     press.lx = e.clientX; press.ly = e.clientY;
   }
   function onUp(e) {
+    touches.delete(e.pointerId);
+    if (pinch) { if (touches.size < 2) pinch = null; return; }
     if (!press) return;
     const p = press;
     press = null;
@@ -226,7 +255,7 @@
     if (p.panOnly || p.mode === 'point') return;
     // A click
     if (tool) return toolClick(p.start);
-    if (e.shiftKey && feature() && editable(sel.kind, feature())) return addPoint(p.start);
+    if (editing && e.shiftKey && feature() && editable(sel.kind, feature())) return addPoint(p.start);
     const under = hits(p.start);
     if (!under.length) return select(null);
     const i = sel ? under.findIndex(x => x.kind === sel.kind && x.id === sel.id) : -1, pick = under[(i + 1) % under.length];
@@ -245,7 +274,7 @@
       return;
     }
     const f = feature();
-    if (!f) return;
+    if (!f || !editing) return;
     if (e.key === 'Delete') { e.preventDefault(); removeSelected(); return; }
     const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
     if (step && shape(sel.kind) === 'point' && !e.target.closest('button, summary, a')) {
@@ -255,7 +284,7 @@
     }
   }
   function removeSelected() {
-    if (!sel) return;
+    if (!sel || !editing) return;
     const { kind, id } = sel;
     select(null);
     S.edit(map => PM.remove(map, kind, id));
@@ -266,13 +295,14 @@
     svg.addEventListener('pointerdown', onDown);
     svg.addEventListener('pointermove', onMove);
     svg.addEventListener('pointerup', onUp);
-    svg.addEventListener('pointercancel', () => { if (press && press.moved && press.mode !== 'pan') S.end(); press = null; svg.classList.remove('panning'); });
-    svg.addEventListener('dblclick', () => { if (tool && tool.pts) finish(); });
+    svg.addEventListener('pointercancel', e => { touches.delete(e.pointerId); pinch = null; if (press && press.moved && press.mode !== 'pan') S.end(); press = null; svg.classList.remove('panning'); });
+    svg.addEventListener('dblclick', e => { if (tool && tool.pts) finish(); else if (!tool && !e.target.closest('.hd')) V.zoomAt(e.clientX, e.clientY, 2, true); });
+    svg.addEventListener('pointerleave', () => emit('hover', { hit: null }));
     svg.addEventListener('contextmenu', e => {
       const hd = e.target.closest ? e.target.closest('.hd') : null;
       if (hd && hd.dataset.i != null) { e.preventDefault(); removePoint(+hd.dataset.i); }
     });
-    svg.addEventListener('wheel', e => { e.preventDefault(); V.zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0016))); }, { passive: false });
+    svg.addEventListener('wheel', e => { e.preventDefault(); V.zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022)), true); }, { passive: false });
     document.addEventListener('keydown', onKey);
     document.addEventListener('keyup', e => { if (e.key === ' ') spaceDown = false; });
     window.addEventListener('blur', () => { spaceDown = false; });
@@ -285,8 +315,16 @@
     init, select, removeSelected, distanceText,
     get selection() { return sel; },
     get tool() { return tool; },
+    get editing() { return editing; },
+    setEditing(on) {
+      editing = !!on;
+      if (!editing && tool && tool.type === 'add') setTool(null);
+      svg.classList.toggle('editing', editing);
+      draw();
+      emit('mode', editing);
+    },
     setVis(v) { vis = v; },
-    add(kind) { setTool({ type: 'add', kind, pts: multi(kind) ? [] : null, ends: [] }); },
+    add(kind) { if (editing) setTool({ type: 'add', kind, pts: multi(kind) ? [] : null, ends: [] }); },
     measure() { setTool(tool && tool.type === 'measure' ? null : { type: 'measure', pts: [] }); },
     cancel() { setTool(null); },
     on: (name, fn) => listeners[name].push(fn)

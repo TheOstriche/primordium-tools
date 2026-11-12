@@ -1,5 +1,6 @@
 // Draws the world map as SVG. The stored map stays plain (outlines, lines, points); all the detail seen here is
-// generated when drawing: roughened coasts, shallow-water bands, feathered terrain, trees, peaks, tapered rivers.
+// generated when drawing: roughened coasts, shallow-water bands, trees, peaks, tapered rivers. The land itself
+// (blended, textured terrain) is painted as a picture by terrain.js and placed in the land layer here.
 // Every random choice is seeded from the feature's id, so the picture is the same every time and a feature only
 // changes when its own data changes.
 //
@@ -26,23 +27,44 @@
     shallows: [[70, '#3a6968', '#4d807c'], [48, '#44797a', '#5c918b'], [28, '#528b87', '#72a79c'], [11, '#6fa49a', '#a5cdbd']],
     land: '#aaa468', landShade: '#4a3a20', shadow: '#0c1b1e',
     water: '#86b6bf', waterEdge: '#3c6875', waterLight: '#cfe8e6',
-    road: '#4a3826', roadCase: '#f3e7c6', border: '#241a12', borderCase: '#f1e4c3',
-    biome: {
-      'plains-dry': { fill: '#b6a765' },
-      sand: { fill: '#d2ae6b' },
-      mesa: { fill: '#c98a4a', pattern: 'pMesa' },
-      obsidian: { fill: '#5c5b61', pattern: 'pGlass', dark: true },
-      scar: { fill: 'url(#gScar)', edge: '#1b1220', glow: '#8a3fb0', dark: true },
-      rock: { fill: '#9e998c', pattern: 'pRock' },
-      ice: { fill: '#e9f1f3', pattern: 'pIce' },
-      darkforest: { fill: '#4e6645', dark: true },
-      desert: { fill: '#e3cf9a', pattern: 'pDune' },
-      ash: { fill: '#3d3634', pattern: 'pAsh', dark: true },
-      forest: { fill: '#84903a' },
-      tundra: { fill: '#b9bfae', pattern: 'pTundra' },
-      swamp: { fill: '#6d7a52', pattern: 'pSwamp' },
-      grass: { fill: '#a9a65b', pattern: 'pGrass' }
+    road: '#4a3826', roadCase: '#f3e7c6',
+    // Terrain, painted by terrain.js. a and b are the two tones noise mixes between; c speckles in where the
+    // fine texture is high; rim glows along the edge; mark is the small symbol scattered over it (gap: spacing
+    // in map units; sparse: the share of spots left empty; ink: its color). feather is how wide the blend into
+    // neighbours is, in map units; rough how ragged that edge is. dark: lettering over it is drawn light.
+    terrain: {
+      base: { a: '#a6a363', b: '#b9b072', c: '#8f9a56', mark: 'tuft', ink: '#6f7038', gap: 26, sparse: 0.62, markAlpha: 0.5 },
+      strand: { a: '#d8c890', b: '#e4d6a4', rough: 0.5, soft: 0.3 },
+      unknown: { a: '#999999', b: '#aaaaaa' },
+      'plains-dry': { a: '#b9a660', b: '#c9b673', c: '#a39a5a', mark: 'tuft', ink: '#8a7a3c', gap: 22, sparse: 0.5, feather: 22 },
+      sand: { a: '#d6b16c', b: '#e2c487', c: '#c9a560', mark: 'dune', ink: '#a8884a', gap: 26, sparse: 0.45, feather: 12 },
+      mesa: { a: '#c98646', b: '#d79c5c', c: '#a96a34', mark: 'crack', ink: '#7a4a22', gap: 22, sparse: 0.3 },
+      obsidian: { a: '#4f4e55', b: '#6a6972', c: '#2f2e36', mark: 'shard', ink: '#b9bccd', gap: 15, sparse: 0.35, markAlpha: 0.5, dark: true, feather: 9 },
+      scar: { a: '#120c16', b: '#3a1d47', c: '#0b070d', rim: '#9a48c4', dark: true, feather: 9, rough: 1.1 },
+      rock: { a: '#9a9588', b: '#b0ab9d', c: '#7f7a6e', mark: 'rock', ink: '#5f5a4e', gap: 18, sparse: 0.35 },
+      ice: { a: '#e4eef1', b: '#f6fafb', c: '#c4dbe3', mark: 'ice', ink: '#8fb4c2', gap: 22, sparse: 0.4, feather: 10 },
+      snow: { a: '#eef2f3', b: '#ffffff', c: '#d5dfe4', mark: 'drift', ink: '#a8b8c2', gap: 22, sparse: 0.45 },
+      darkforest: { a: '#465f3f', b: '#58724c', c: '#35492f', dark: true, feather: 11 },
+      forest: { a: '#7c8a36', b: '#909c44', c: '#66752c', feather: 11 },
+      jungle: { a: '#3f6a34', b: '#56803e', c: '#2c5027', dark: true, feather: 11 },
+      desert: { a: '#e0cb94', b: '#ecdcae', c: '#d0b87c', mark: 'dune', ink: '#b09456', gap: 24, sparse: 0.3, feather: 16 },
+      ash: { a: '#37302e', b: '#4a4240', c: '#262120', mark: 'ember', ink: '#7a6e66', gap: 11, sparse: 0.4, markAlpha: 0.8, dark: true, feather: 10 },
+      tundra: { a: '#b4bba9', b: '#c8cdbd', c: '#9aa590', mark: 'tuft', ink: '#7d8672', gap: 20, sparse: 0.5 },
+      swamp: { a: '#66744d', b: '#7a8660', c: '#4d6258', mark: 'reed', ink: '#3d4a2e', gap: 15, sparse: 0.35 },
+      marsh: { a: '#5f7a66', b: '#76907a', c: '#4a6b70', mark: 'reed', ink: '#34493c', gap: 13, sparse: 0.3 },
+      grass: { a: '#a3a455', b: '#b4b266', c: '#8d9848', mark: 'tuft', ink: '#6d7434', gap: 15, sparse: 0.35, feather: 18 },
+      hills: { a: '#9b9a5c', b: '#b3a96e', c: '#84854c', mark: 'hill', ink: '#5e5a34', gap: 20, sparse: 0.3 },
+      scrub: { a: '#b0a567', b: '#c0b47a', c: '#8f945a', mark: 'bush', ink: '#66713a', gap: 14, sparse: 0.4, markAlpha: 0.7 },
+      savanna: { a: '#c4b266', b: '#d3c27c', c: '#a89c52', mark: 'bush', ink: '#7a7a3a', gap: 24, sparse: 0.55, markAlpha: 0.7, feather: 20 },
+      farmland: { a: '#b7b057', b: '#cdbf66', c: '#93a24c', mark: 'furrow', ink: '#7d7434', gap: 16, sparse: 0.25, markAlpha: 0.5 },
+      badlands: { a: '#b06a48', b: '#c5855c', c: '#8a4c34', mark: 'crack', ink: '#6a3622', gap: 18, sparse: 0.3 },
+      // The ground under each kind of mountain range.
+      'under-mountain': { a: '#978a6c', b: '#aa9c7c', c: '#7d7058', rough: 1, strength: 0.75 },
+      'under-snow': { a: '#c9cfcf', b: '#e3e8e8', c: '#a9b2b6', rough: 1, strength: 0.85 },
+      'under-volcano': { a: '#2e2826', b: '#3f3734', c: '#1f1a19', rough: 1, strength: 0.8 },
+      'under-butte': { a: '#c08248', b: '#d09a5e', c: '#a56c38', rough: 1, strength: 0.5 }
     },
+    border: '#5a231c', borderBand: '#7a2e24',
     peak: {
       mountain: { lit: '#b89468', shade: '#6d4c2f' },
       snow: { lit: '#d3d7d6', shade: '#7c8690' },
@@ -127,7 +149,6 @@
   }
   let tex = null;
   const textures = () => tex || (tex = {
-    land: texture(7, 640, 480, [70, 48, 20], [255, 246, 214], 0.42),
     sea: texture(11, 640, 480, [8, 26, 32], [190, 228, 220], 0.3)
   });
 
@@ -137,7 +158,7 @@
   // The same coasts without the fine roughening: a quarter of the points, for the wide soft strokes (shallows,
   // shading) where the detail would not show but would still cost time on every pan and zoom.
   const softCoasts = map => map.coast.map(c => cached('s' + JSON.stringify(c.pts), () => smoothPath(c.pts, true, 0.4))).join('');
-  const biomePath = b => cached('b' + JSON.stringify(b.pts) + b.id, () => smoothPath(roughen(b.pts, PM.hash(b.id), 5, 2), true, 0.5));
+
 
   // Little wave marks out in open water, away from every shore.
   function waves(map) {
@@ -151,13 +172,17 @@
     return d;
   }
 
+  // Trees fill a wood but thin out toward its edge, with a few strays beyond it, so it has no hard outline.
   function trees(map, b) {
-    const conifer = b.type === 'darkforest', sp = conifer ? 10.5 : 9, r = PM.rng(PM.hash(b.id));
+    const conifer = b.type === 'darkforest', sp = b.type === 'jungle' ? 7.5 : conifer ? 10.5 : 9, r = PM.rng(PM.hash(b.id)), reach = 16;
     const [x0, y0, x1, y1] = PM.bbox(b.pts), list = [];
-    for (let y = y0, row = 0; y <= y1; y += sp * 0.8, row++) for (let x = x0 + (row % 2) * sp / 2; x <= x1; x += sp) {
-      const px = x + (r() - 0.5) * sp * 0.85, py = y + (r() - 0.5) * sp * 0.65, k = 0.75 + r() * 0.55, skip = r() < 0.07;
-      if (skip || !PM.inPolygon(px, py, b.pts) || !PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 3) continue;
-      list.push([px, py, k]);
+    for (let y = y0 - reach, row = 0; y <= y1 + reach; y += sp * 0.8, row++) for (let x = x0 - reach + (row % 2) * sp / 2; x <= x1 + reach; x += sp) {
+      const px = x + (r() - 0.5) * sp * 0.85, py = y + (r() - 0.5) * sp * 0.65, k = 0.75 + r() * 0.55, chance = r();
+      const inside = PM.inPolygon(px, py, b.pts), d = PM.lineDistance(px, py, b.pts, true).d;
+      // Deep inside: almost always. At the edge: about half. Outside: rarer the farther out.
+      const keep = inside ? 0.5 + Math.min(1, d / reach) * 0.45 : 0.42 * (1 - Math.min(1, d / reach));
+      if (chance > keep || !PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 3) continue;
+      list.push([px, py, inside ? k : k * 0.85]);
     }
     list.sort((a, c) => a[1] - c[1]);
     const id = conifer ? 'tCon' : 'tDec';
@@ -242,11 +267,14 @@
   }
 
   /* ---------- static parts ---------- */
+  // lod0 (whole map) to lod3 (close up), set by view.js.
   const STYLE = `
     .pin .dot{display:none}
     .lod0 .pin.minor .ico,.lod0 .pin.minor .nm,.lod0 .minor-road,.lod0 .small-label{display:none}
     .lod0 .pin.minor .dot{display:inline}
     .lod1 .pin.minor .nm{display:none}
+    .realm{transition:opacity .25s}
+    .lod3 .realm{opacity:.25}
     text{user-select:none;-webkit-user-select:none}`;
   const SYMBOLS = (() => {
     const body = `fill="${PAL.ink}" stroke="${PAL.paper}" stroke-width="1.2" paint-order="stroke" stroke-linejoin="round"`;
@@ -266,17 +294,7 @@
     <radialGradient id="gSea" cx="50%" cy="48%" r="72%"><stop offset="0" stop-color="${PAL.seaIn}"/><stop offset=".65" stop-color="${PAL.seaMid}"/><stop offset="1" stop-color="${PAL.seaOut}"/></radialGradient>
     <radialGradient id="gScar" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#40204f"/><stop offset=".45" stop-color="#1b1220"/><stop offset="1" stop-color="#0e0a10"/></radialGradient>
     <radialGradient id="gLava"><stop offset="0" stop-color="#ff6a1f" stop-opacity=".55"/><stop offset="1" stop-color="#ff6a1f" stop-opacity="0"/></radialGradient>
-    <pattern id="pMesa" width="34" height="26" patternUnits="userSpaceOnUse"><path d="M2 8l8 3 5-4 9 5M18 20l6-3 8 2M4 22l5-2" stroke="#8e5a2c" stroke-width=".9" fill="none" opacity=".55"/></pattern>
-    <pattern id="pGlass" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M3 6l4-3 2 5zM14 15l5-2-1 6z" fill="#8a8a96" opacity=".6"/><path d="M4 5l2-1M15 14l3-1" stroke="#cfd3e6" stroke-width=".6"/></pattern>
-    <pattern id="pRock" width="30" height="24" patternUnits="userSpaceOnUse"><path d="M4 7l3-2 3 2M19 17l3-2 3 2M17 5l2-1" stroke="#6f6a5e" stroke-width=".8" fill="none" opacity=".55"/></pattern>
-    <pattern id="pIce" width="40" height="30" patternUnits="userSpaceOnUse"><path d="M3 10h9M20 22h11M27 6h7" stroke="#a9c8d3" stroke-width="1" opacity=".7" stroke-linecap="round"/></pattern>
-    <pattern id="pDune" width="46" height="24" patternUnits="userSpaceOnUse"><path d="M2 14q9-9 18 0M24 22q9-9 18 0M28 6q5-5 10 0" stroke="#b79a5c" stroke-width="1" fill="none" opacity=".75" stroke-linecap="round"/></pattern>
-    <pattern id="pAsh" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="4" cy="5" r=".9" fill="#7a6e66"/><circle cx="14" cy="13" r=".7" fill="#7a6e66"/><circle cx="9" cy="17" r=".6" fill="#e0602b" opacity=".6"/></pattern>
-    <pattern id="pTundra" width="26" height="20" patternUnits="userSpaceOnUse"><path d="M4 6h3M15 14h4M20 4h2" stroke="#8d9482" stroke-width=".8" opacity=".6" stroke-linecap="round"/></pattern>
-    <pattern id="pSwamp" width="24" height="18" patternUnits="userSpaceOnUse"><path d="M3 6h7M14 13h7" stroke="#48583a" stroke-width=".8" opacity=".7" stroke-linecap="round"/><path d="M5 5.5v-3M7 5.5v-2.2M16 12.5v-3M18 12.5v-2" stroke="#3d4a2e" stroke-width=".7" opacity=".8" stroke-linecap="round"/></pattern>
-    <pattern id="pGrass" width="28" height="22" patternUnits="userSpaceOnUse"><path d="M5 8l1-3M7 8l1-2.4M19 17l1-3M21 17l1-2.4" stroke="#7d7c3c" stroke-width=".7" opacity=".6" stroke-linecap="round"/></pattern>
     ${SYMBOLS}
-    <image id="texLand" href="${t.land}" width="1" height="1" preserveAspectRatio="none"/>
     <image id="texSea" href="${t.sea}" width="1" height="1" preserveAspectRatio="none"/>`;
   }
 
@@ -294,20 +312,13 @@
         `<use href="#coastAll" fill="${PAL.shadow}" opacity=".4" transform="translate(2.2 3.2)"/>`;
       return s;
     } },
-    { id: 'land', needs: ['coast', 'biomes', 'meta'], toggles: ['biomes'], draw(map, ctx) {
-      const W = map.meta.width, H = map.meta.height;
-      let s = `<clipPath id="landClip"><use href="#coastAll"/></clipPath><g clip-path="url(#landClip)"><rect width="${W}" height="${H}" fill="${PAL.land}"/>`;
-      if (ctx.vis.biomes) for (const b of map.biomes) {
-        const st = PAL.biome[b.type] || { fill: '#999' }, d = biomePath(b), edge = st.edge || st.fill;
-        // The same shape again with two soft, wider strokes feathers the edge into its neighbours.
-        s += `<path d="${d}" fill="none" stroke="${edge}" stroke-width="20" stroke-opacity=".28" stroke-linejoin="round"/>` +
-          `<path d="${d}" fill="${st.fill}" stroke="${edge}" stroke-width="9" stroke-opacity=".5" stroke-linejoin="round"/>`;
-        if (st.pattern) s += `<path d="${d}" fill="url(#${st.pattern})"/>`;
-        if (st.glow) s += `<path d="${d}" fill="none" stroke="${st.glow}" stroke-width="16" opacity=".14"/><path d="${d}" fill="none" stroke="${st.glow}" stroke-width="7" opacity=".22"/><path d="${d}" fill="none" stroke="${st.glow}" stroke-width="2" opacity=".45"/>`;
-      }
-      s += `<use href="#texLand" transform="scale(${W} ${H})"/>` +
+    // The land: terrain.js paints it and fills the two images (the whole map, and a sharper one for the part on
+    // screen when zoomed in). For export the picture arrives ready-made in ctx.terrain.
+    { id: 'land', needs: ['coast', 'meta'], toggles: [], draw(map, ctx) {
+      const W = map.meta.width, H = map.meta.height, whole = `x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"`;
+      return `<clipPath id="landClip"><use href="#coastAll"/></clipPath><g clip-path="url(#landClip)"><rect width="${W}" height="${H}" fill="${PAL.land}"/>` +
+        (ctx.flat ? (ctx.terrain ? `<image href="${ctx.terrain}" ${whole}/>` : '') : `<image id="terrainBase" ${whole}/><image id="terrainDetail" preserveAspectRatio="none"/>`) +
         `<g fill="none" stroke="${PAL.landShade}" stroke-linejoin="round"><use href="#coastSoft" stroke-width="24" opacity=".08"/><use href="#coastSoft" stroke-width="11" opacity=".1"/><use href="#coastAll" stroke-width="4.5" opacity=".14"/></g></g>`;
-      return s;
     } },
     { id: 'coastline', needs: ['coast'], toggles: [], draw: (map, ctx) => `<use href="#coastAll" fill="none" stroke="${PAL.ink}" stroke-linejoin="round" ${sw(ctx, 1.25)}/>` },
     { id: 'water', needs: ['rivers', 'lakes'], toggles: ['rivers'], draw(map, ctx) {
@@ -323,7 +334,7 @@
     { id: 'trees', needs: ['biomes', 'coast'], toggles: ['trees'], draw(map, ctx) {
       if (!ctx.vis.trees) return '';
       const coast = JSON.stringify(map.coast);
-      return map.biomes.filter(b => b.type === 'forest' || b.type === 'darkforest').map(b => cached('t' + JSON.stringify(b) + PM.hash(coast), () => trees(map, b))).join('');
+      return map.biomes.filter(b => b.type === 'forest' || b.type === 'darkforest' || b.type === 'jungle').map(b => cached('t' + JSON.stringify(b) + PM.hash(coast), () => trees(map, b))).join('');
     } },
     { id: 'roads', needs: ['roads', 'settlements'], toggles: ['roads'], draw(map, ctx) {
       if (!ctx.vis.roads) return '';
@@ -340,10 +351,11 @@
     { id: 'ranges', needs: ['ranges'], toggles: ['ranges'], draw: (map, ctx) => (ctx.vis.ranges ? map.ranges.map(g => cached('r' + JSON.stringify(g), () => peaks(g))).join('') : '') },
     { id: 'borders', needs: ['borders'], toggles: ['borders'], draw(map, ctx) {
       if (!ctx.vis.borders) return '';
-      let s = `<g fill="none" stroke-linecap="round">`;
+      let s = `<g fill="none" stroke-linecap="round" stroke-linejoin="round">`;
       for (const b of map.borders) {
         const d = smoothPath(b.pts, !!b.closed);
-        s += `<path d="${d}" stroke="${PAL.borderCase}" opacity=".28" ${sw(ctx, 3.6)}/><path d="${d}" stroke="${PAL.border}" ${dashed(ctx, 2.1, 0.1, 6)}/>`;
+        s += `<path d="${d}" stroke="${PAL.borderBand}" opacity=".16" ${sw(ctx, 9)}/><path d="${d}" stroke="${PAL.paper}" opacity=".5" ${sw(ctx, 3)}/>` +
+          `<path d="${d}" stroke="${PAL.border}" ${ctx.flat ? 'stroke-width="1.5" stroke-dasharray="8 3.5 0.1 3.5"' : 'style="stroke-width:calc(1.5px*var(--s));stroke-dasharray:calc(8px*var(--s)) calc(3.5px*var(--s)) calc(.1px*var(--s)) calc(3.5px*var(--s))"'}/>`;
       }
       return s + '</g>';
     } },
@@ -372,10 +384,10 @@
       let s = '';
       for (const l of map.labels) {
         const realm = l.kind === 'realm', sea = l.kind === 'sea', under = PM.biomeAt(map, l.x, l.y);
-        const onDark = sea || !!(under && (PAL.biome[under.type] || {}).dark && PM.onLand(map, l.x, l.y));
+        const onDark = sea || !!(under && (PAL.terrain[under.type] || {}).dark && PM.onLand(map, l.x, l.y));
         const fill = onDark ? PAL.paper : PAL.ink, halo = onDark ? '#140e0c' : PAL.paper;
         const look = realm ? `font-family="${FONT.realm}" letter-spacing="${f1(l.size * 0.14)}" fill-opacity=".88"` : `font-family="${FONT.text}" font-style="italic" letter-spacing="${sea ? f1(l.size * 0.1) : 0.6}"`;
-        s += `<text${l.size < 16 ? ' class="small-label"' : ''} x="${l.x}" y="${l.y}" transform="rotate(${l.rot || 0} ${l.x} ${l.y})" text-anchor="middle" dominant-baseline="middle" font-size="${l.size}" ${look} fill="${fill}" stroke="${halo}" stroke-width="${f1(Math.max(2.4, l.size * 0.14))}" stroke-opacity="${sea ? 0.35 : 0.8}" paint-order="stroke" stroke-linejoin="round">${esc(l.text)}</text>`;
+        s += `<text class="${realm ? 'realm' : ''}${l.size < 16 ? ' small-label' : ''}" x="${l.x}" y="${l.y}" transform="rotate(${l.rot || 0} ${l.x} ${l.y})" text-anchor="middle" dominant-baseline="middle" font-size="${l.size}" ${look} fill="${fill}" stroke="${halo}" stroke-width="${f1(Math.max(2.4, l.size * 0.14))}" stroke-opacity="${sea ? 0.35 : 0.8}" paint-order="stroke" stroke-linejoin="round">${esc(l.text)}</text>`;
       }
       return s;
     } },
@@ -397,7 +409,8 @@
         s += `<path d="M${cx},${cy}L${poly([side(-1), tip])}Z" fill="${gold}" stroke="${line}" stroke-width=".7" stroke-linejoin="round"/><path d="M${cx},${cy}L${poly([side(1), tip])}Z" fill="${dim}" stroke="${line}" stroke-width=".7" stroke-linejoin="round"/>`;
       }
       s += `<circle cx="${cx}" cy="${cy}" r="3" fill="${line}" stroke="${gold}" stroke-width="1"/><text x="${cx}" y="${cy - R - 9}" text-anchor="middle" font-family="${FONT.realm}" font-size="22" fill="#e6d7ac">N</text></g>`;
-      // Scale bar
+      if (!ctx.flat) return s;
+      // Scale bar (exports only: on screen the app shows one that follows the zoom)
       const sc = map.meta.scale, px = sc.barUnits * sc.pxPerUnit, x0 = 90, y0 = H - 70, cream = '#e6d7ac';
       s += `<g font-family="${FONT.text}" font-size="13" fill="${cream}">`;
       for (let i = 0; i < 4; i++) s += `<rect x="${f1(x0 + i * px / 4)}" y="${y0}" width="${f1(px / 4)}" height="6" fill="${i % 2 ? cream : '#3b3022'}" stroke="${cream}" stroke-width=".8"/>`;
@@ -407,17 +420,18 @@
     } }
   ];
   // The switches in the Layers panel.
-  const TOGGLES = [['biomes', 'Terrain'], ['trees', 'Forests'], ['ranges', 'Mountains'], ['rivers', 'Rivers and lakes'], ['borders', 'Borders'], ['roads', 'Roads'],
-    ['settlements', 'Settlements'], ['labels', 'Names and labels'], ['deco', 'Compass and scale'], ['grid', 'Grid (every 50 units)']];
+  const TOGGLES = [['biomes', 'Terrain areas'], ['trees', 'Trees'], ['ranges', 'Mountains'], ['rivers', 'Rivers and lakes'], ['borders', 'Borders'], ['roads', 'Roads'],
+    ['settlements', 'Settlements'], ['labels', 'Names and labels'], ['deco', 'Compass'], ['grid', 'Grid (every 50 units)']];
   const defaultVis = () => Object.fromEntries(TOGGLES.map(([k]) => [k, k !== 'grid']));
 
   const layer = (L, map, ctx) => L.draw(map, ctx);
   const key = (L, map, ctx) => L.toggles.map(t => (ctx.vis[t] ? 1 : 0)).join('') + (ctx.flat ? 'F' : '') + L.needs.map(n => JSON.stringify(map[n])).join('|');
 
-  // A complete standalone SVG with every layer on and sizes baked in. `fontCss` (optional) embeds the fonts.
+  // A complete standalone SVG with sizes baked in. opts.terrain is the painted land (MapTerrain.dataUrl);
+  // opts.fontCss (optional) embeds the fonts.
   function full(map, opts) {
     opts = opts || {};
-    const ctx = { vis: opts.vis || defaultVis(), flat: true }, W = map.meta.width, H = map.meta.height, scale = opts.scale || 1;
+    const ctx = { vis: opts.vis || defaultVis(), flat: true, terrain: opts.terrain || '' }, W = map.meta.width, H = map.meta.height, scale = opts.scale || 1;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W * scale}" height="${H * scale}">` +
       (opts.fontCss ? `<style>${opts.fontCss}</style>` : '') + `<defs>${defs(ctx)}</defs>` +
       LAYERS.map(L => `<g>${layer(L, map, ctx)}</g>`).join('') + '</svg>';

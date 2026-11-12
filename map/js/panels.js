@@ -1,12 +1,14 @@
-// The two side panels.
-//   Left:  Features (every feature, grouped and searchable), Layers (what is drawn), Checks (the map's problems)
-//   Right: the selected feature's details, or the map's own details when nothing is selected
-// Both are rebuilt from the map whenever it changes; nothing here holds map data of its own.
+// The two panels that float over the map, and the search.
+//   Browse (left):   Features (every feature, grouped), Layers (what is drawn), Checks (the map's problems)
+//   Details (right): the selected feature. While looking it is a read-only card; while editing it is the form
+//                    that changes it. With nothing selected it can show the map's own details (name, scale).
+//   search(text):    the features matching what was typed in the search box
+// All of it is rebuilt from the map whenever the map changes; nothing here holds map data of its own.
 (function () {
   'use strict';
   const PM = window.PrimordiumMap, S = window.MapStore, E = window.MapEditor, V = window.MapView, { h, fill, toast, debounce } = window.MapUI;
   const PLACEHOLDER_SCALE = 'Placeholder scale: set pxPerUnit once a real distance is decided.';
-  let left, right, tabButtons, tab = 'features', query = '', vis, onVis, problems = [];
+  let left, right, rightBox, tabButtons, tab = 'features', vis, onVis, problems = [], showMap = false;
   const openGroups = new Set(['settlements', 'labels']);
 
   /* ---------- left: features ---------- */
@@ -18,27 +20,26 @@
     return PM.title(kind, f);
   }
   const rowTag = (kind, f) => (kind === 'roads' ? (f.major ? 'major' : '') : PM.TYPE_FIELD[kind] ? f[PM.TYPE_FIELD[kind]] : '');
-  function featureList() {
-    const q = query.trim().toLowerCase(), sel = E.selection;
-    const match = (kind, f) => !q || [f.id, rowText(kind, f), rowTag(kind, f), f.notes || ''].some(t => String(t).toLowerCase().includes(q));
-    const groups = PM.LISTS.map(kind => {
-      const items = S.map[kind].filter(f => match(kind, f));
-      if (q && !items.length) return null;
-      return h('details.group', { open: !!q || openGroups.has(kind), ontoggle: e => { if (!q) openGroups[e.target.open ? 'add' : 'delete'](kind); } },
-        h('summary', PM.KINDS[kind].many, h('span.count', items.length)),
-        h('div.rows', items.map(f => h('button.row', {
-          type: 'button', 'aria-current': sel && sel.kind === kind && sel.id === f.id ? 'true' : null,
-          onclick: () => E.select(kind, f.id, { fly: true })
-        }, h('span.name', rowText(kind, f)), rowTag(kind, f) ? h('span.tag', rowTag(kind, f)) : null))));
-    }).filter(Boolean);
-    return groups.length ? groups : h('p.muted', 'Nothing matches.');
+  const features = () => PM.LISTS.map(kind => {
+    const sel = E.selection;
+    return h('details.group', { open: openGroups.has(kind), ontoggle: e => { openGroups[e.target.open ? 'add' : 'delete'](kind); } },
+      h('summary', PM.KINDS[kind].many, h('span.count', S.map[kind].length)),
+      h('div.rows', S.map[kind].map(f => h('button.row', {
+        type: 'button', 'aria-current': sel && sel.kind === kind && sel.id === f.id ? 'true' : null,
+        onclick: () => E.select(kind, f.id, { fly: true })
+      }, h('span.name', rowText(kind, f)), rowTag(kind, f) ? h('span.tag', rowTag(kind, f)) : null))));
+  });
+  // Up to `limit` features whose name, id, type or notes contain the text; names that start with it come first.
+  function search(text, limit) {
+    const q = text.trim().toLowerCase(), out = [];
+    if (!q) return out;
+    for (const kind of ['settlements', 'labels', 'biomes', 'ranges', 'rivers', 'lakes', 'coast', 'borders', 'roads']) for (const f of S.map[kind]) {
+      const title = rowText(kind, f), tag = rowTag(kind, f), t = title.toLowerCase();
+      const rank = t.startsWith(q) ? 0 : t.includes(q) ? 1 : [f.id, tag, f.notes || ''].some(v => String(v).toLowerCase().includes(q)) ? 2 : -1;
+      if (rank >= 0) out.push({ kind, id: f.id, title, tag: tag || PM.KINDS[kind].one.toLowerCase(), rank });
+    }
+    return out.sort((a, b) => a.rank - b.rank).slice(0, limit || 8);
   }
-  // The search box is kept apart from the list, so typing in it never loses the keyboard.
-  const features = () => [
-    h('input.search', { type: 'search', placeholder: 'Find by name, id, type, or notes', 'aria-label': 'Find a feature', value: query,
-      oninput: e => { query = e.target.value; fill(left.querySelector('.list'), featureList()); } }),
-    h('div.list', featureList())
-  ];
 
   /* ---------- left: layers ---------- */
   function layers() {
@@ -76,7 +77,8 @@
 
   function inspector() {
     const sel = E.selection, f = sel && PM.find(S.map, sel.kind, sel.id);
-    if (!f) return mapDetails();
+    if (!f) return showMap ? mapDetails() : null;
+    if (!E.editing) return card(sel.kind, f);
     const kind = sel.kind, K = PM.KINDS[kind], id = f.id;
     // Edits look the feature up again: after an undo the map is a new object.
     const set = fn => S.edit(map => { const cur = PM.find(map, kind, id); if (cur) fn(cur, map); });
@@ -135,6 +137,22 @@
     }, { maxlength: PM.LIMITS.id, spellcheck: 'false' }), kind === 'settlements' ? 'Roads follow a settlement when its id changes.' : null)));
     return out;
   }
+  // What a visitor sees: the feature's name, kind, notes and a few facts. Nothing here changes the map.
+  function card(kind, f) {
+    const K = PM.KINDS[kind], field = PM.TYPE_FIELD[kind], facts = [];
+    if (K.shape === 'line' || K.shape === 'link') facts.push(`About ${E.distanceText(PM.lineLength(K.shape === 'line' ? PM.sampleCurve(f.pts, !!f.closed, 6) : PM.outline(S.map, kind, f)))} long`);
+    if (kind === 'roads') facts.push(f.major ? 'A major road' : 'A minor road');
+    if (K.shape === 'point') facts.push(`At ${Math.round(f.x)}, ${Math.round(f.y)}`);
+    const roads = kind === 'settlements' ? S.map.roads.filter(r => r.from === f.id || r.to === f.id) : [];
+    return [
+      h('p.eyebrow', K.one + (field ? ' · ' + f[field] : '')), h('h2', kind === 'roads' ? rowText(kind, f) : PM.title(kind, f)),
+      f.notes ? h('p.notes', f.notes) : h('p.muted', 'No notes yet.'),
+      facts.length ? h('p.muted.facts', facts.join(' · ')) : null,
+      roads.length ? [h('p.eyebrow', `Roads (${roads.length})`), h('div.rows', roads.map(r => h('button.row', { type: 'button', onclick: () => E.select('roads', r.id) }, h('span.name', rowText('roads', r)), r.major ? h('span.tag', 'major') : null)))] : null,
+      h('div.btns', h('button', { type: 'button', onclick: () => E.select(kind, f.id, { fly: true }) }, 'Zoom to'),
+        h('button', { type: 'button', onclick: () => E.setEditing(true) }, 'Edit'))
+    ];
+  }
   function duplicate(kind, id) {
     let copy = null;
     S.edit(map => {
@@ -161,22 +179,28 @@
       h('div.pair', row('Map units per unit of distance', number('pxPerUnit', sc.pxPerUnit, v => meta(x => { x.scale.pxPerUnit = v; }), { min: 0.0001 })),
         row('Unit of distance', input('unit', sc.unit, v => meta(x => { x.scale.unit = v.trim() || x.scale.unit; }), { maxlength: 30 }))),
       row('Length of the scale bar', number('barUnits', sc.barUnits, v => meta(x => { x.scale.barUnits = v; }), { min: 0.001 }), `In ${sc.unit}.`),
-      h('label.check', h('input', { type: 'checkbox', 'data-key': 'decided', checked: !sc.note, onchange: e => meta(x => { if (e.target.checked) delete x.scale.note; else x.scale.note = PLACEHOLDER_SCALE; }) }), 'The scale is decided'),
-      h('details.more', { open: true }, h('summary', 'How to work on the map'),
-        h('ul.tips',
-          h('li', h('b', 'Click'), ' a feature to select it. Click the same spot again for the one beneath it.'),
-          h('li', h('b', 'Drag'), ' the round handles to reshape. The small handles halfway along an edge add a point there.'),
-          h('li', h('b', 'Alt+click'), ' or right-click a handle to remove that point. ', h('b', 'Shift+click'), ' the map to add one.'),
-          h('li', h('b', 'Ctrl+drag'), ' a selected shape to move all of it. Drag a selected settlement or label to move it; the arrow keys nudge it.'),
-          h('li', h('b', 'Scroll'), ' to zoom, drag empty space to pan (or hold Space and drag anywhere).'),
-          h('li', h('b', 'Ctrl+Z'), ' undoes, ', h('b', 'Ctrl+Y'), ' redoes, ', h('b', 'Ctrl+S'), ' saves, ', h('b', 'Delete'), ' removes the selection.')))
+      h('label.check', h('input', { type: 'checkbox', 'data-key': 'decided', checked: !sc.note, onchange: e => meta(x => { if (e.target.checked) delete x.scale.note; else x.scale.note = PLACEHOLDER_SCALE; }) }), 'The scale is decided')
     ];
   }
+
+  const help = () => h('ul.tips',
+    h('li', h('b', 'Scroll'), ' or double-click to zoom. Drag to move the map. More appears as you zoom in.'),
+    h('li', h('b', 'Click'), ' anything to see what it is. Click the same spot again for the thing beneath it.'),
+    h('li', h('b', 'Search'), ' (or press /) finds a place by name, id, type, or notes.'),
+    h('li', h('b', 'Measure'), ' (M): click along a route to see its length.'),
+    h('li', 'Switch on ', h('b', 'Edit'), ' to change the map:'),
+    h('li', h('b', 'Drag'), ' the round handles to reshape. The small handles halfway along an edge add a point there.'),
+    h('li', h('b', 'Alt+click'), ' or right-click a handle to remove that point. ', h('b', 'Shift+click'), ' the map to add one.'),
+    h('li', h('b', 'Ctrl+drag'), ' a selected shape to move all of it. Drag a selected settlement or label to move it; the arrow keys nudge it.'),
+    h('li', h('b', 'Add'), ' draws something new: click its points, then Enter (or double-click) to finish; Esc cancels.'),
+    h('li', h('b', 'Ctrl+Z'), ' undoes, ', h('b', 'Ctrl+Y'), ' redoes, ', h('b', 'Ctrl+S'), ' saves, ', h('b', 'Delete'), ' removes the selection.'));
 
   function renderRight() {
     // Keep the keyboard where it was: Tab has already moved to the next field by the time this runs.
     const key = right.contains(document.activeElement) ? document.activeElement.dataset.key : null;
-    fill(right, inspector());
+    const body = inspector();
+    rightBox.hidden = !body;
+    fill(right, body);
     const again = key && right.querySelector(`[data-key="${key}"]`);
     if (again) again.focus();
   }
@@ -185,22 +209,24 @@
   const listeners = [];
 
   function init(opts) {
-    left = opts.left; right = opts.right; tabButtons = opts.tabs; vis = opts.vis; onVis = opts.onVis;
+    left = opts.left; right = opts.right; rightBox = opts.rightBox; tabButtons = opts.tabs; vis = opts.vis; onVis = opts.onVis;
     tabButtons.forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; renderLeft(); }));
     problems = PM.check(S.map);
     renderLeft();
     renderRight();
     S.on('change', e => { if (e.live) return; setTimeout(renderRight); if (tab === 'features') renderLeft(); recheck(); });
+    E.on('mode', renderRight);
     E.on('select', () => {
       renderRight();
       if (tab !== 'features') return;
       const sel = E.selection;
-      if (sel && !query) openGroups.add(sel.kind);
+      if (sel) { openGroups.add(sel.kind); showMap = false; }
       renderLeft();
       const cur = left.querySelector('[aria-current="true"]');
       if (cur) cur.scrollIntoView({ block: 'nearest' });
     });
   }
 
-  window.MapPanels = { init, show(name) { tab = name; renderLeft(); }, problems: () => problems, onProblems: fn => listeners.push(fn) };
+  window.MapPanels = { init, search, help, show(name) { tab = name; renderLeft(); },
+    mapDetails(on) { showMap = on; if (on) E.select(null); renderRight(); }, problems: () => problems, onProblems: fn => listeners.push(fn) };
 })();

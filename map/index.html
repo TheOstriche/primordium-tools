@@ -14,44 +14,63 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="../" title="Back to Primordium Tools">Primordium <span>Map</span></a>
-    <div class="tools" role="toolbar" aria-label="Map tools">
-      <div class="menu-wrap"><button type="button" id="btn-add">Add</button></div>
-      <button type="button" id="btn-measure" aria-pressed="false" title="Measure a distance (M)">Measure</button>
-      <span class="sep"></span>
-      <button type="button" id="btn-undo" title="Undo (Ctrl+Z)">Undo</button>
-      <button type="button" id="btn-redo" title="Redo (Ctrl+Y)">Redo</button>
-      <span class="sep"></span>
-      <button type="button" id="btn-out" class="icon" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
-      <button type="button" id="btn-fit" title="Show the whole map (0)"><span id="zoom">100%</span></button>
-      <button type="button" id="btn-in" class="icon" aria-label="Zoom in" title="Zoom in (+)">+</button>
+  <!-- The map fills the window; everything else floats over it. -->
+  <main class="stage" id="stage">
+    <svg id="map" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The world map of Primordium"></svg>
+  </main>
+
+  <div class="bar top-left">
+    <div class="searchbox" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+      <input id="search" type="search" placeholder="Where would you like to go?" aria-label="Search the map" autocomplete="off" spellcheck="false" aria-controls="results">
+      <div class="results" id="results" role="listbox" hidden></div>
     </div>
-    <div class="save-status" id="status" role="status"></div>
-    <button type="button" id="btn-save" class="primary" title="Save the map to its file (Ctrl+S)">Save</button>
-    <div class="menu-wrap right"><button type="button" id="btn-more">More</button></div>
+    <button type="button" class="pill" id="btn-browse" aria-expanded="false" title="Every feature, the layers, and the checks">Browse</button>
+    <a class="pill home" href="../" title="Back to Primordium Tools">Primordium</a>
+  </div>
+
+  <div class="bar top-right" role="toolbar" aria-label="Map tools">
+    <button type="button" class="pill" id="btn-edit" aria-pressed="false" title="Switch editing on or off">Edit</button>
+    <div class="menu-wrap edit-only"><button type="button" class="pill" id="btn-add">Add</button></div>
+    <button type="button" class="pill edit-only" id="btn-undo" title="Undo (Ctrl+Z)">Undo</button>
+    <button type="button" class="pill edit-only" id="btn-redo" title="Redo (Ctrl+Y)">Redo</button>
+    <button type="button" class="pill" id="btn-measure" aria-pressed="false" title="Measure a distance (M)">Measure</button>
+    <span class="save-status edit-only" id="status" role="status"></span>
+    <button type="button" class="pill primary edit-only" id="btn-save" title="Save the map to its file (Ctrl+S)">Save</button>
+    <div class="menu-wrap right"><button type="button" class="pill" id="btn-more">More</button></div>
     <button type="button" data-theme-toggle></button>
-  </header>
+  </div>
+
   <div id="banner" hidden></div>
 
-  <div class="work">
-    <aside class="side" aria-label="Features, layers, and checks">
-      <div class="tabs" role="tablist">
-        <button type="button" role="tab" data-tab="features" aria-selected="true">Features</button>
-        <button type="button" role="tab" data-tab="layers" aria-selected="false">Layers</button>
-        <button type="button" role="tab" data-tab="checks" aria-selected="false">Checks</button>
-      </div>
-      <div class="side-body" id="left"></div>
-    </aside>
-    <main class="stage" id="stage">
-      <svg id="map" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The world map of Primordium"></svg>
-      <div class="hint" id="hint" role="status" hidden></div>
-      <div class="hud"><span id="coords"></span></div>
-    </main>
-    <aside class="side" aria-label="Details">
-      <div class="side-body" id="right"></div>
-    </aside>
+  <aside class="panel left" id="browse" aria-label="Features, layers, and checks" hidden>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="features" aria-selected="true">Features</button>
+      <button type="button" role="tab" data-tab="layers" aria-selected="false">Layers</button>
+      <button type="button" role="tab" data-tab="checks" aria-selected="false">Checks</button>
+      <button type="button" class="close" id="btn-close-browse" aria-label="Close">&times;</button>
+    </div>
+    <div class="panel-body" id="left"></div>
+  </aside>
+  <aside class="panel right" id="details" aria-label="Details" hidden>
+    <button type="button" class="close" id="btn-close-details" aria-label="Close">&times;</button>
+    <div class="panel-body" id="right"></div>
+  </aside>
+
+  <div class="bar bottom-left">
+    <div class="scalebar" id="scalebar" title="Distance on the map at this zoom"><i></i><span></span></div>
   </div>
+  <div class="bar bottom-right">
+    <span class="chip" id="coords"></span>
+    <div class="zoomer">
+      <button type="button" id="btn-in" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      <button type="button" id="btn-fit" title="Show the whole map (0)"><span id="zoom">100%</span></button>
+      <button type="button" id="btn-out" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
+    </div>
+  </div>
+
+  <div class="hint" id="hint" role="status" hidden></div>
+  <div class="tip" id="tip" hidden></div>
   <div id="toasts" role="status" aria-live="polite"></div>
   <input type="file" id="file" accept=".json,application/json" hidden>
 
@@ -61,6 +80,7 @@
   <!-- App -->
   <script src="js/ui.js"></script>
   <script src="js/draw.js"></script>
+  <script src="js/terrain.js"></script>
   <script src="js/view.js"></script>
   <script src="js/store.js"></script>
   <script src="js/editor.js"></script>
