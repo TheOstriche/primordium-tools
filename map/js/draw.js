@@ -1,5 +1,6 @@
 // Draws the world map as SVG. The stored map stays plain (outlines, lines, points); all the detail seen here is
-// generated when drawing: roughened coasts, shallow-water bands, trees, peaks, tapered rivers. The land itself
+// generated when drawing: roughened coasts, shallow-water bands, trees, hills, peaks, tapered rivers and their
+// mouths, bridges, and roads that merge where they share a route. The land itself
 // (blended, textured terrain) is painted as a picture by terrain.js and placed in the land layer here.
 // Every random choice is seeded from the feature's id, so the picture is the same every time and a feature only
 // changes when its own data changes.
@@ -221,7 +222,7 @@
       const offs = [[0, 0], [5 + r() * 2, 1.5 - r() * 3], [-4 - r() * 2, 2 - r() * 4]];
       if (!PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 6) continue;
       const under = PM.biomeAt(map, px, py), odds = under ? OPEN[under.type] || 0 : 1;
-      if (roll > odds * 0.55 || map.lakes.some(l => PM.inPolygon(px, py, l.pts)) || map.ranges.some(g => PM.lineDistance(px, py, g.pts, !!g.closed).d < g.width * 0.7)) continue;
+      if (roll > odds * 0.55 || map.ranges.some(g => PM.lineDistance(px, py, g.pts, !!g.closed).d < g.width * 0.7)) continue;
       for (let i = 0; i < n; i++) out.push([px + offs[i][0], py + offs[i][1], k, kind]);
     }
     return out;
@@ -344,25 +345,23 @@
     return out;
   }
 
-  // A river's outline: narrow at its source (first point), widening to its mouth.
-  // Where a river ends: in a lake, in another river, or (otherwise) the sea.
-  function riverEnd(map, rv) {
-    const [x, y] = rv.pts[rv.pts.length - 1];
-    if (map.lakes.some(l => PM.inPolygon(x, y, l.pts) || PM.lineDistance(x, y, l.pts, true).d <= PM.NEAR)) return 'lake';
-    if (map.rivers.some(o => o !== rv && o.pts.length > 1 && PM.lineDistance(x, y, PM.sampleCurve(o.pts, false, 4), false).d <= PM.NEAR)) return 'river';
-    return 'sea';
-  }
-  // A river's outline: narrow at the source, wider downstream. One that reaches the sea opens out into a mouth
-  // over its last stretch and runs on a little, so the land clip cuts it off exactly at the coast.
+  // How wide a river is `t` of the way along it (0 at the source, 1 at the mouth).
+  const riverWidth = (rv, t) => rv.width[0] + (rv.width[1] - rv.width[0]) * Math.pow(t, 0.8);
+  // A river's outline: narrow at the source, wider downstream. One that reaches the sea (`sea`) opens out into a
+  // mouth over its last stretch and runs on a little, so the land clip cuts it off exactly at the coast.
+  const MOUTH = { length: 20, widening: 1.5, overrun: 7 };
   function riverShape(rv, sea) {
-    const pts = PM.sampleCurve(rv.pts, false, 3), [w0, w1] = rv.width, L = [], R = [];
-    if (sea && pts.length > 1) { const a = pts[pts.length - 2], b = pts[pts.length - 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; pts.push([b[0] + (b[0] - a[0]) / l * 7, b[1] + (b[1] - a[1]) / l * 7]); }
+    const pts = PM.sampleCurve(rv.pts, false, 3), L = [], R = [];
+    if (sea && pts.length > 1) {
+      const a = pts[pts.length - 2], b = pts[pts.length - 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      pts.push([b[0] + (b[0] - a[0]) / l * MOUTH.overrun, b[1] + (b[1] - a[1]) / l * MOUTH.overrun]);
+    }
     const n = pts.length, run = [0];
     for (let i = 1; i < n; i++) run.push(run[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const total = run[n - 1] || 1;
     for (let i = 0; i < n; i++) {
       const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, left = total - run[i];
-      const w = (w0 + (w1 - w0) * Math.pow(run[i] / total, 0.8)) / 2 * (sea && left < 20 ? 1 + 1.5 * Math.pow(1 - left / 20, 2) : 1);
+      const flare = sea && left < MOUTH.length ? 1 + MOUTH.widening * Math.pow(1 - left / MOUTH.length, 2) : 1, w = riverWidth(rv, run[i] / total) / 2 * flare;
       L.push([pts[i][0] - dy / l * w, pts[i][1] + dx / l * w]);
       R.push([pts[i][0] + dy / l * w, pts[i][1] - dx / l * w]);
     }
@@ -370,48 +369,54 @@
   }
 
   // Roads that share a stretch are drawn there once: major roads first, then each road only where no road
-  // already drawn runs (within a unit). So roads visibly merge into one and fork apart again.
+  // already drawn runs (within a unit). So roads visibly merge into one and fork apart again. Returns
+  // [[road, path data]] for the roads that have anything left to draw.
   function roadRuns(map) {
-    const grid = new Map(), key = (x, y) => Math.floor(x / 2) * 100003 + Math.floor(y / 2), out = [];
-    const covered = (x, y) => { for (let dy = -2; dy <= 2; dy += 2) for (let dx = -2; dx <= 2; dx += 2) { const c = grid.get(key(x + dx, y + dy)); if (c) for (let i = 0; i < c.length; i += 2) if ((c[i] - x) * (c[i] - x) + (c[i + 1] - y) * (c[i + 1] - y) < 1) return true; } return false; };
+    const CELL = 2, drawn = new Map(), key = (x, y) => Math.floor(x / CELL) * 100003 + Math.floor(y / CELL), out = [];
+    const covered = ([x, y]) => {
+      for (let dy = -CELL; dy <= CELL; dy += CELL) for (let dx = -CELL; dx <= CELL; dx += CELL) {
+        const c = drawn.get(key(x + dx, y + dy));
+        if (c && c.some(q => (q[0] - x) * (q[0] - x) + (q[1] - y) * (q[1] - y) < 1)) return true;
+      }
+      return false;
+    };
     for (const rd of map.roads.slice().sort((a, b) => b.major - a.major)) {
-      const line = PM.roadLine(map, rd); if (line.length < 2) continue;
-      const pts = [];
-      for (let i = 0; i < line.length - 1; i++) { const a = line[i], b = line[i + 1], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 1.2)); for (let j = 0; j < n; j++) pts.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); }
-      pts.push(line[line.length - 1]);
-      const hid = pts.map(p => covered(p[0], p[1]));
+      const line = PM.roadLine(map, rd);
+      if (line.length < 2) continue;
+      const pts = PM.resample(line, false, 1.2), hid = pts.map(covered);
       let d = '';
       for (let i = 0; i < pts.length; i++) {
         if (hid[i]) continue;
         let j = i; while (j + 1 < pts.length && !hid[j + 1]) j++;
-        const run = pts.slice(Math.max(0, i - 1), Math.min(pts.length, j + 2));
+        // One covered point is kept at each end, so the run reaches the road it leaves or joins.
+        const run = pts.slice(Math.max(0, i - 1), j + 2);
         if (run.length > 2) d += 'M' + poly(run);
         i = j;
       }
-      for (const p of pts) { const k = key(p[0], p[1]); let c = grid.get(k); if (!c) grid.set(k, c = []); c.push(p[0], p[1]); }
+      for (const q of pts) { const k = key(q[0], q[1]); if (!drawn.has(k)) drawn.set(k, []); drawn.get(k).push(q); }
       if (d) out.push([rd, d]);
     }
     return out;
   }
   // A small bridge wherever a road crosses a river: a pale deck between two dark rails, as long as the river is wide.
   function bridges(map) {
-    let s = '';
     const rivers = map.rivers.map(rv => { const pts = PM.sampleCurve(rv.pts, false, 4); return { rv, pts, box: PM.bbox(pts) }; });
+    let s = '';
     for (const rd of map.roads) {
-      const line = PM.roadLine(map, rd); if (line.length < 2) continue;
+      const line = PM.roadLine(map, rd);
+      if (line.length < 2) continue;
       const box = PM.bbox(line), deck = rd.major ? 2.1 : 1.5;
       let out = '';
       for (const { rv, pts, box: rb } of rivers) {
         if (rb[0] > box[2] || rb[2] < box[0] || rb[1] > box[3] || rb[3] < box[1]) continue;
         for (let i = 0; i < line.length - 1; i++) for (let j = 0; j < pts.length - 1; j++) {
-          const a = line[i], b = line[i + 1], c = pts[j], d = pts[j + 1], den = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
-          if (!den) continue;
-          const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / den, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / den;
-          if (t < 0 || t >= 1 || u < 0 || u >= 1) continue;
-          const x = a[0] + t * (b[0] - a[0]), y = a[1] + t * (b[1] - a[1]), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dx = (b[0] - a[0]) / l, dy = (b[1] - a[1]) / l;
-          const half = (rv.width[0] + (rv.width[1] - rv.width[0]) * Math.pow((j + u) / (pts.length - 1), 0.8)) / 2 + 1.5, o = deck / 2;
-          const seg = k => `M${f1(x - dx * half - dy * k)},${f1(y - dy * half + dx * k)}L${f1(x + dx * half - dy * k)},${f1(y + dy * half + dx * k)}`;
-          out += `<path d="${seg(0)}" stroke="${PAL.roadCase}" stroke-width="${deck}"/><path d="${seg(o)}${seg(-o)}" stroke="${PAL.ink}" stroke-width=".4"/>`;
+          const at = PM.crossing(line[i], line[i + 1], pts[j], pts[j + 1]);
+          if (!at) continue;
+          const a = line[i], b = line[i + 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dx = (b[0] - a[0]) / l, dy = (b[1] - a[1]) / l;
+          const half = riverWidth(rv, (j + at.u) / (pts.length - 1)) / 2 + 1.5;
+          // A line along the road, `k` units to one side of its middle.
+          const seg = k => `M${f1(at.x - dx * half - dy * k)},${f1(at.y - dy * half + dx * k)}L${f1(at.x + dx * half - dy * k)},${f1(at.y + dy * half + dx * k)}`;
+          out += `<path d="${seg(0)}" stroke="${PAL.roadCase}" stroke-width="${deck}"/><path d="${seg(deck / 2)}${seg(-deck / 2)}" stroke="${PAL.ink}" stroke-width=".4"/>`;
         }
       }
       if (out) s += `<g class="bridge${rd.major ? '' : ' minor-road'}" fill="none">${out}</g>`;
@@ -495,7 +500,7 @@
       // river water spreads into the sea beyond it.
       let s = '', fans = '';
       for (const rv of map.rivers) {
-        const sea = riverEnd(map, rv) === 'sea', [x, y] = rv.pts[rv.pts.length - 1], R = rv.width[1] * 1.6 + 3;
+        const sea = PM.riverEnd(map, rv) === 'sea', [x, y] = rv.pts[rv.pts.length - 1], R = rv.width[1] * 1.6 + 3;
         if (sea) fans += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(R * 1.7)}" fill="${PAL.waterLight}" opacity=".16"/><circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(R)}" fill="${PAL.waterLight}" opacity=".22"/>`;
         s += `<path d="${cached('v' + sea + JSON.stringify(rv), () => riverShape(rv, sea))}" fill="${PAL.water}" stroke="${PAL.waterEdge}" stroke-width=".6" stroke-linejoin="round"/>`;
       }

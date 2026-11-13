@@ -550,7 +550,7 @@ Labels: ${WORLD.labels.map(l => `${l.text} (\`${l.id}\`, ${l.kind})`).join(', ')
 - every settlement is on land (within ${PM.NEAR} map units of a shore counts)
 - every river's last point reaches the sea, a lake, or another river (within ${PM.NEAR} map units)
 - no river runs through the sea: it ends where it first reaches the coast
-- every path starts on a road, a settlement, or another path, and stays on land
+- every path starts on a road, a settlement, or another path, and no road or path runs through the sea or a lake
 - every border is a closed loop, or each of its ends reaches the sea or another border (within ${PM.NEAR} map units)
 - \`map-data.js\` holds exactly the map in \`primordium-map.json\`
 
@@ -564,6 +564,8 @@ The current map ${problems.length ? 'has these problems: ' + problems.map(p => p
 - **Editing** (the Edit switch): click to select (again for what is beneath), drag handles to reshape, halfway handles add points, drag settlements and labels, draw new features of every kind, bend roads with \`via\` points, reorder terrain areas, undo and redo, a details form for every field including notes, a list of every feature, layer switches, and a Checks tab that lists problems and jumps to them.
 - **Saving:** Save writes \`primordium-map.json\` and \`map-data.js\` into the repository's \`shared/map\` folder (Chrome or Edge). Unsaved edits are kept in the browser.
 - **In and out:** open or download the map file, "Copy changes for the Claude project" and "Apply changes from the Claude project" (the format below), and PNG or SVG export for printing or the GM tool's map backdrop.
+
+- **Roads by rule:** \`node tools/route-roads.js\` lays every road and path over the ground again (round water and mountains, merging where roads head the same way, paths joining the nearest road). So a handoff answer can move or add settlements, rivers and ranges, and name which settlements a new road joins, without working out the road's line.
 
 Not built yet (from the suggested plan): travel times, regional and local maps linked from the world map, an elevation layer, checks that rivers run downhill, wind and rain-shadow overlays, and region tags tied to NPC families.
 

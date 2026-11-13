@@ -4,6 +4,7 @@
 //
 //   PrimordiumMap.shaped(data, notes)   the one gate for map data from outside (a file, a paste, saved edits)
 //   PrimordiumMap.check(map)            the map's problems: [{ level: 'error'|'warn', kind, id, text }]
+//   PrimordiumMap.biomeAt / riverEnd    what ground is at a point, and what a river runs into
 //   PrimordiumMap.hit(map, x, y, tol)   the features under a point, topmost first
 //   PrimordiumMap.diff / patch          what changed between two maps, and applying such a change
 //   PrimordiumMap.serialize / dataFile  the exact text of primordium-map.json and of the generated map-data.js
@@ -95,6 +96,23 @@
     if (!closed) out.push(pts[n - 1].slice());
     return out;
   }
+  // Points along straight lines between `pts`, no more than `step` apart (the corners are kept).
+  function resample(pts, closed, step) {
+    const out = [], n = pts.length, segs = closed ? n : n - 1;
+    for (let i = 0; i < segs; i++) {
+      const a = pts[i], b = pts[(i + 1) % n], k = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+      for (let j = 0; j < k; j++) out.push([a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k]);
+    }
+    if (!closed && n) out.push(pts[n - 1].slice());
+    return out;
+  }
+  // Where segment a-b crosses segment c-d: { x, y, t (how far along a-b, 0 to 1), u (along c-d) }, or null.
+  function crossing(a, b, c, d) {
+    const den = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+    if (!den) return null;
+    const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / den, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / den;
+    return t < 0 || t >= 1 || u < 0 || u >= 1 ? null : { x: a[0] + t * (b[0] - a[0]), y: a[1] + t * (b[1] - a[1]), t, u };
+  }
   function lineLength(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return L; }
 
   /* ---------- looking things up ---------- */
@@ -124,6 +142,16 @@
     for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; out.push([u * u * a.x + 2 * u * t * cx + t * t * b.x, u * u * a.y + 2 * u * t * cy + t * t * b.y]); }
     return out;
   }
+  // Clear of the land by more than the tolerance: properly out at sea.
+  const atSea = (map, x, y) => !onLand(map, x, y) && shoreDistance(map, x, y) > NEAR;
+  const inLake = (map, x, y, reach) => map.lakes.some(l => inPolygon(x, y, l.pts) || (reach > 0 && lineDistance(x, y, l.pts, true).d <= reach));
+  // What a river's last point runs into: 'lake', 'river', 'sea', or null when it stops on dry land.
+  function riverEnd(map, rv) {
+    const [x, y] = rv.pts[rv.pts.length - 1];
+    if (inLake(map, x, y, NEAR)) return 'lake';
+    if (map.rivers.some(o => o !== rv && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, false, 4), false).d <= NEAR)) return 'river';
+    return !onLand(map, x, y) || shoreDistance(map, x, y) <= NEAR ? 'sea' : null;
+  }
   // A label's rough size in map units (text is not measured here, so this is an estimate).
   function labelSize(l) {
     return { w: Math.max(1, String(l.text || '').length) * l.size * (l.kind === 'realm' ? 0.8 : 0.5), h: l.size * 1.15 };
@@ -144,70 +172,75 @@
   const title = (kind, f) => (kind === 'labels' ? f.text : f.name) || f.id;
 
   /* ---------- checking ---------- */
+  // Each rule below adds what it finds through add(level, kind, id, text). An 'error' is a broken map (the tests
+  // fail on one); a 'warn' is something worth a look.
   function check(map) {
-    const out = [];
-    const add = (level, kind, id, text) => out.push({ level, kind, id, text });
+    const out = [], add = (level, kind, id, text) => out.push({ level, kind, id, text });
+    const near = ([x, y]) => `${Math.round(x)}, ${Math.round(y)}`;
+    const roadLines = map.roads.map(r => roadLine(map, r));
+    // The first point of a line that lies in the sea or in a lake.
+    const firstWet = line => line.find(([x, y]) => atSea(map, x, y) || inLake(map, x, y, 0));
+
+    // Every kind: unique ids, enough points, a type the renderer knows.
     for (const kind of LISTS) {
-      const K = KINDS[kind], seen = new Set();
+      const K = KINDS[kind], seen = new Set(), field = TYPE_FIELD[kind];
       for (const f of map[kind] || []) {
         if (seen.has(f.id)) add('error', kind, f.id, `Two ${K.many.toLowerCase()} share the id "${f.id}".`);
         seen.add(f.id);
         if ((K.shape === 'area' || K.shape === 'line') && f.pts.length < minPoints(kind, f))
           add('error', kind, f.id, `${K.one} "${title(kind, f)}" needs at least ${minPoints(kind, f)} points.`);
-        const field = TYPE_FIELD[kind];
         if (field && !TYPES[kind].includes(f[field])) add('warn', kind, f.id, `${K.one} "${title(kind, f)}" has a type the map cannot draw ("${f[field]}").`);
       }
     }
+
+    // Roads: join two different settlements that exist, once, and stay out of the water.
     const pairs = new Set();
-    for (const r of map.roads) {
+    map.roads.forEach((r, i) => {
       for (const end of [r.from, r.to]) if (!find(map, 'settlements', end)) add('error', 'roads', r.id, `Road "${r.id}" points to a settlement that does not exist ("${end}").`);
       if (r.from === r.to) add('error', 'roads', r.id, `Road "${r.id}" starts and ends at the same settlement.`);
       const pair = [r.from, r.to].sort().join(' > ');
       if (pairs.has(pair)) add('warn', 'roads', r.id, `Road "${r.id}" repeats another road between the same two settlements.`);
       pairs.add(pair);
+      // Its two ends are settlements, which may stand right on a shore, so only the road between them is looked at.
+      const wet = firstWet(roadLines[i].slice(2, -2));
+      if (wet) add('warn', 'roads', r.id, `Road "${r.id}" runs through water near ${near(wet)}: bend it round, or run node tools/route-roads.js.`);
+    });
+
+    // Paths: may end anywhere (a pass, a cove, deep in a wood) but must leave from somewhere, and stay on land.
+    const joined = (p, [x, y]) => map.settlements.some(s => Math.hypot(s.x - x, s.y - y) <= NEAR) || roadLines.some(l => l.length > 1 && lineDistance(x, y, l, false).d <= NEAR) ||
+      map.paths.some(o => o !== p && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, false, 4), false).d <= NEAR);
+    for (const p of map.paths) {
+      if (p.pts.length < 2 || p.closed) continue;
+      if (!joined(p, p.pts[0]) && !joined(p, p.pts[p.pts.length - 1])) add('warn', 'paths', p.id, `Path "${title('paths', p)}" joins nothing: one end should start on a road, a settlement, or another path.`);
+      const wet = firstWet(sampleCurve(p.pts, false, 4));
+      if (wet) add('warn', 'paths', p.id, `Path "${title('paths', p)}" runs through water near ${near(wet)}.`);
     }
-    // A path may end anywhere (a pass, a cove, deep in a wood), but it has to leave from somewhere: one end on a
-    // road, a settlement, or another path.
-    if (map.paths.length) {
-      const lines = map.roads.map(r => roadLine(map, r)).filter(l => l.length > 1);
-      const joined = (p, [x, y]) => map.settlements.some(s => Math.hypot(s.x - x, s.y - y) <= NEAR) || lines.some(l => lineDistance(x, y, l, false).d <= NEAR) ||
-        map.paths.some(o => o !== p && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, false, 4), false).d <= NEAR);
-      for (const p of map.paths) {
-        if (p.pts.length < 2 || p.closed) continue;
-        if (!joined(p, p.pts[0]) && !joined(p, p.pts[p.pts.length - 1])) add('warn', 'paths', p.id, `Path "${title('paths', p)}" joins nothing: one end should start on a road, a settlement, or another path.`);
-        const wet = sampleCurve(p.pts, false, 4).find(([x, y]) => !onLand(map, x, y) && shoreDistance(map, x, y) > NEAR);
-        if (wet) add('warn', 'paths', p.id, `Path "${title('paths', p)}" runs into the sea near ${Math.round(wet[0])}, ${Math.round(wet[1])}.`);
-      }
-    }
-    for (const s of map.settlements) {
-      if (!onLand(map, s.x, s.y) && shoreDistance(map, s.x, s.y) > NEAR) add('error', 'settlements', s.id, `Settlement "${title('settlements', s)}" is in the sea.`);
-    }
-    // Borders work one way: a border either closes on itself, or each of its ends reaches the sea or another
-    // border. Then every territory is fully outlined by borders and coast, and none trails off in open country.
+
+    // Settlements: on land.
+    for (const s of map.settlements) if (atSea(map, s.x, s.y)) add('error', 'settlements', s.id, `Settlement "${title('settlements', s)}" is in the sea.`);
+
+    // Borders: a border either closes on itself, or each of its ends reaches the sea or another border. Then every
+    // territory is fully outlined by borders and coast, and none trails off in open country.
     for (const b of map.borders) {
       if (b.closed || b.pts.length < 2) continue;
-      for (const [x, y] of [b.pts[0], b.pts[b.pts.length - 1]]) {
-        const meets = !onLand(map, x, y) || shoreDistance(map, x, y) <= NEAR ||
+      for (const end of [b.pts[0], b.pts[b.pts.length - 1]]) {
+        const [x, y] = end, meets = !onLand(map, x, y) || shoreDistance(map, x, y) <= NEAR ||
           map.borders.some(o => o !== b && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, !!o.closed, 4), !!o.closed).d <= NEAR);
-        if (!meets) add('error', 'borders', b.id, `Border "${b.id}" has a loose end at ${Math.round(x)}, ${Math.round(y)}: each end should reach the sea or another border (or the border should be a closed loop).`);
+        if (!meets) add('error', 'borders', b.id, `Border "${b.id}" has a loose end at ${near(end)}: each end should reach the sea or another border (or the border should be a closed loop).`);
       }
     }
+
+    // Rivers: end in water, and stop where they first meet the sea (only the last few units may lie off the land).
     for (const rv of map.rivers) {
       if (rv.pts.length < 2) continue;
-      const [x, y] = rv.pts[rv.pts.length - 1];
-      const ends = !onLand(map, x, y) || shoreDistance(map, x, y) <= NEAR ||
-        map.lakes.some(l => inPolygon(x, y, l.pts) || lineDistance(x, y, l.pts, true).d <= NEAR) ||
-        map.rivers.some(o => o !== rv && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, false, 4), false).d <= NEAR);
-      if (!ends) add('error', 'rivers', rv.id, `River "${title('rivers', rv)}" ends on dry land: its last point should reach the sea, a lake, or another river.`);
-      // A river stops where it meets the sea: only its last few units may lie off the land.
+      if (!riverEnd(map, rv)) add('error', 'rivers', rv.id, `River "${title('rivers', rv)}" ends on dry land: its last point should reach the sea, a lake, or another river.`);
       const line = sampleCurve(rv.pts, false, 4);
       let left = lineLength(line);
       for (let i = 0; i < line.length; i++) {
         if (i) left -= Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]);
-        if (left > NEAR * 2 && !onLand(map, line[i][0], line[i][1]) && shoreDistance(map, line[i][0], line[i][1]) > NEAR) {
-          add('error', 'rivers', rv.id, `River "${title('rivers', rv)}" runs through the sea near ${Math.round(line[i][0])}, ${Math.round(line[i][1])}: it should end where it first reaches the coast.`);
-          break;
-        }
+        if (left <= NEAR * 2 || !atSea(map, line[i][0], line[i][1])) continue;
+        add('error', 'rivers', rv.id, `River "${title('rivers', rv)}" runs through the sea near ${near(line[i])}: it should end where it first reaches the coast.`);
+        break;
       }
     }
     return out;
@@ -418,8 +451,8 @@
 
   root.PrimordiumMap = {
     KINDS, LISTS, TYPES, TYPE_FIELD, LIMITS, NEAR, JSON_FILE, DATA_FILE,
-    isClosed, minPoints, hash, rng, bbox, inPolygon, segDistance, lineDistance, sampleCurve, lineLength,
-    find, onLand, shoreDistance, biomeAt, roadLine, outline, bounds, labelSize, title,
+    isClosed, minPoints, hash, rng, bbox, inPolygon, segDistance, lineDistance, sampleCurve, resample, crossing, lineLength,
+    find, onLand, shoreDistance, biomeAt, riverEnd, roadLine, outline, bounds, labelSize, title,
     check, shaped, freshId, rename, remove, insertPoint, hit, diff, isEmptyDiff, describe, patch, serialize, dataFile, counts
   };
 })(typeof window !== 'undefined' ? window : globalThis);

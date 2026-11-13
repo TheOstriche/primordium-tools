@@ -1,5 +1,6 @@
 // Checks the world map: the stored map itself (shared/map/primordium-map.json), the packaged copy the apps load,
-// and the map rules in shared/map/map-model.js (checking, safe loading, clicking, comparing, patching).
+// the map rules in shared/map/map-model.js (checking, safe loading, clicking, comparing, patching), and the
+// road-laying tool (tools/route-roads.js).
 // Run: node tools/test-map.js   (or node tools/test.js for every test)
 const fs = require('fs'), path = require('path');
 const dir = path.join(__dirname, '..', 'shared', 'map');
@@ -18,10 +19,8 @@ const map = PM.shaped(raw, notes);
 check(!notes.length, 'the map file needs no repairs when it is read', notes);
 check(same(map.meta, raw.meta) && PM.LISTS.every(k => same(map[k], raw[k])), 'reading the map file changes nothing in it');
 const problems = PM.check(map), errors = problems.filter(p => p.level === 'error');
-// These are the five rules from the map handoff: unique ids, roads join real settlements, shapes have enough
-// points, settlements are on land, and rivers end in the sea, a lake, or another river.
-check(!errors.length, 'the map passes every check (ids, roads, point counts, settlements on land, rivers reach water, borders meet)', errors.map(p => p.text));
-check(!problems.some(p => p.level === 'warn'), 'the map has no notes either (unknown types, repeated roads)', problems.filter(p => p.level === 'warn').map(p => p.text));
+check(!errors.length, 'the map passes every check (see check() in map-model.js)', errors.map(p => p.text));
+check(!problems.some(p => p.level === 'warn'), 'the map has no notes either (unknown types, repeated roads, roads or paths through water, loose paths)', problems.filter(p => p.level === 'warn').map(p => p.text));
 check(map.coast.some(c => c.id === 'mainland'), 'the mainland coastline exists');
 const inside = p => p[0] >= -200 && p[0] <= map.meta.width + 200 && p[1] >= -200 && p[1] <= map.meta.height + 200;
 const strays = PM.LISTS.flatMap(k => map[k].filter(f => !PM.outline(map, k, f).every(inside)).map(f => `${k}/${f.id}`));
@@ -45,15 +44,28 @@ check(broken(m => { m.rivers[0].pts.length = 1; }, 'at least 2 points'), 'a line
 check(broken(m => { m.settlements[0].x = 30; m.settlements[0].y = 30; }, 'in the sea'), 'a settlement in the sea is reported');
 check(broken(m => { const r = m.rivers[0]; r.pts[r.pts.length - 1] = [700, 600]; }, 'dry land'), 'a river that stops on dry land is reported');
 check(broken(m => { const r = m.rivers[0]; r.pts.push([100, 100], [60, 60]); }, 'through the sea'), 'a river that runs on through the sea is reported');
-{ const m = copy(map), s = m.settlements[0]; m.roads = []; m.settlements = []; m.paths = [{ id: 'p-loose', name: '', pts: [[s.x, s.y], [s.x + 4, s.y]] }];
-  check(PM.check(m).some(p => p.level === 'warn' && p.text.includes('joins nothing')), 'a path that starts nowhere is noted'); }
-{ const m = copy(map), b = { id: 'beach-test', type: 'sand', name: '', shore: 10, pts: [[0, 0], [m.meta.width, 0], [m.meta.width, m.meta.height], [0, m.meta.height]] }; m.biomes.push(b);
-  const s = m.settlements.find(t => PM.shoreDistance(m, t.x, t.y) > 40 && PM.onLand(m, t.x, t.y)), p = m.settlements.find(t => PM.shoreDistance(m, t.x, t.y) < 6 && PM.onLand(m, t.x, t.y));
-  check(PM.biomeAt(m, p.x, p.y) === b && PM.biomeAt(m, s.x, s.y) !== b && PM.shaped(m).biomes.find(q => q.id === 'beach-test').shore === 10, 'a shore-only terrain area counts near the sea and not inland, and survives loading'); }
-check(map.paths.length > 0 && map.settlements.some(s => s.type === 'village') && PM.TYPES.settlements.includes('village'), 'the map has paths and villages, and villages are a known type');
 check(broken(m => { const b = m.borders.find(o => !o.closed); b.pts[0] = [700, 560]; }, 'loose end'), 'a border that trails off in open country is reported');
 check(!broken(m => { m.borders.find(o => !o.closed).closed = true; }, 'loose end'), 'a closed border has no ends to check');
-check(PM.check(Object.assign(copy(map), { biomes: [Object.assign(copy(map.biomes[0]), { type: 'lava' })] })).some(p => p.level === 'warn' && p.text.includes('cannot draw')), 'an unknown terrain type is noted');
+// Notes ('warn') rather than errors: things worth a look that do not break the map.
+const noted = (change, words) => { const m = copy(map); change(m); return PM.check(m).some(p => p.level === 'warn' && p.text.includes(words)); };
+check(noted(m => { m.biomes = [Object.assign(copy(m.biomes[0]), { type: 'lava' })]; }, 'cannot draw'), 'an unknown terrain type is noted');
+check(noted(m => { const s = m.settlements[0]; m.roads = []; m.settlements = []; m.paths = [{ id: 'p-loose', name: '', pts: [[s.x, s.y], [s.x + 4, s.y]] }]; }, 'joins nothing'), 'a path that starts nowhere is noted');
+check(noted(m => { const l = m.lakes[0], c = PM.bbox(l.pts), a = m.settlements[0], b = m.settlements[1]; a.x = c[0] - 20; b.x = c[2] + 20; a.y = b.y = (c[1] + c[3]) / 2; m.roads = [{ id: 'wet', from: a.id, to: b.id, major: false, via: [[(c[0] + c[2]) / 2, a.y]] }]; }, 'through water'),
+  'a road through a lake is noted');
+check(map.paths.length > 0 && map.settlements.some(s => s.type === 'village') && PM.TYPES.settlements.includes('village'), 'the map has paths and villages, and villages are a known type');
+
+/* ---------- small geometry and lookups ---------- */
+{
+  check(same(PM.resample([[0, 0], [10, 0], [10, 5]], false, 4), [[0, 0], [10 / 3, 0], [20 / 3, 0], [10, 0], [10, 2.5], [10, 5]]) && PM.resample([[0, 0], [4, 0], [4, 4]], true, 4).length === 4, 'a line is resampled evenly and keeps its corners');
+  const x = PM.crossing([0, 0], [10, 0], [4, -5], [4, 5]);
+  check(x && x.x === 4 && x.y === 0 && x.t === 0.4 && x.u === 0.5 && !PM.crossing([0, 0], [10, 0], [0, 1], [10, 1]) && !PM.crossing([0, 0], [10, 0], [20, -5], [20, 5]), 'two segments cross where they should, and parallel or distant ones do not');
+  const ends = Object.fromEntries(map.rivers.map(r => [r.id, PM.riverEnd(map, r)]));
+  check(ends['glacier-run'] === 'lake' && ends['well-west'] === 'sea' && ends['glacier-west'] === 'river', 'a river is known to end in a lake, the sea, or another river', JSON.stringify(ends));
+  const m = copy(map), b = { id: 'beach-test', type: 'sand', name: '', shore: 10, pts: [[0, 0], [m.meta.width, 0], [m.meta.width, m.meta.height], [0, m.meta.height]] };
+  m.biomes.push(b);
+  const inland = m.settlements.find(t => PM.shoreDistance(m, t.x, t.y) > 40 && PM.onLand(m, t.x, t.y)), coastal = m.settlements.find(t => PM.shoreDistance(m, t.x, t.y) < 6 && PM.onLand(m, t.x, t.y));
+  check(PM.biomeAt(m, coastal.x, coastal.y) === b && PM.biomeAt(m, inland.x, inland.y) !== b && PM.shaped(m).biomes.find(q => q.id === 'beach-test').shore === 10, 'a shore-only terrain area counts near the sea and not inland, and survives loading');
+}
 
 /* ---------- outside data is forced into shape ---------- */
 const throws = fn => { try { fn(); return false; } catch (e) { return true; } };
@@ -83,7 +95,7 @@ check([null, 5, 'x', [], {}, { coast: 'x' }, { coast: [] }, { coast: [{ id: 'a',
   check(PM.rename(m, 'settlements', town.id, 'renamed-town') && m.roads.filter(r => r.from === 'renamed-town' || r.to === 'renamed-town').length === roads && !PM.check(m).length, 'renaming a settlement keeps its roads attached');
   check(!PM.rename(m, 'settlements', 'renamed-town', m.settlements[0].id === 'renamed-town' ? m.settlements[1].id : m.settlements[0].id) && !PM.rename(m, 'settlements', 'renamed-town', '  '), 'an id that is taken or empty is refused');
   const before = m.roads.length;
-  check(PM.remove(m, 'settlements', 'renamed-town') && m.roads.length === before - roads && !PM.check(m).length, 'deleting a settlement deletes its roads');
+  check(PM.remove(m, 'settlements', 'renamed-town') && m.roads.length === before - roads && !PM.check(m).some(p => p.level === 'error'), 'deleting a settlement deletes its roads');
   check(PM.freshId(map, 'settlements') === 'place-1' && PM.freshId({ rivers: [{ id: 'river-1' }, { id: 'river-2' }] }, 'rivers') === 'river-3', 'new features get the next free id');
   const line = { pts: [[0, 0], [10, 0], [20, 0]] }, ring = { pts: [[0, 0], [10, 0], [10, 10], [0, 10]] };
   check(PM.insertPoint('rivers', line, [5, 1]) === 1 && PM.insertPoint('rivers', line, [30, 0]) === 4 && PM.insertPoint('rivers', line, [-5, 0]) === 0 && same(line.pts.map(p => p[0]), [-5, 0, 5, 10, 20, 30]), 'a new point joins the nearest edge, or the nearer end of a line');
@@ -123,6 +135,20 @@ check([null, 5, 'x', [], {}, { coast: 'x' }, { coast: [] }, { coast: [{ id: 'a',
   check(!gone.roads.some(r => r.from === map.roads[0].from || r.to === map.roads[0].from), 'removing a settlement through a patch removes its roads');
   check([null, [], 'x', {}, { nope: 1 }].every(v => throws(() => PM.patch(map, v))), 'things that are not changes are refused');
   check(same(PM.patch(map, { set: { settlements: [{ id: 'bad', x: 'no' }], bogus: [{ id: 1 }] } }), map), 'a damaged item in a patch is left out');
+}
+
+/* ---------- laying roads (tools/route-roads.js) ---------- */
+{
+  const { routeRoads } = require('./route-roads.js');
+  const once = copy(map), first = routeRoads(once), twice = copy(once);
+  routeRoads(twice);
+  check(same(once, twice), 'laying the roads a second time changes nothing');
+  check(first.roads === map.roads.length && !first.removed.length && !first.unrouted.length, 'every road is laid, and none is taken off unless asked', first.unrouted);
+  check(!PM.check(once).length, 'freshly laid roads and paths pass every check (none through water, no loose paths)', PM.check(once).map(p => p.text));
+  check(same(once.roads.map(r => [r.id, r.from, r.to, r.major]), map.roads.map(r => [r.id, r.from, r.to, r.major])), 'laying roads keeps which settlements each road joins');
+  const pruned = copy(map), served = m => new Set(m.roads.flatMap(r => [r.from, r.to]));
+  routeRoads(pruned, { prune: true });
+  check([...served(map)].every(id => served(pruned).has(id)) && pruned.roads.filter(r => r.major).length === map.roads.filter(r => r.major).length, 'pruning never takes a settlement\'s last road, nor a major road');
 }
 
 console.log(fails ? `\n${fails} check(s) failed` : '\nAll checks passed');
