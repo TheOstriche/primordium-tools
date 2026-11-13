@@ -195,6 +195,16 @@
         map.lakes.some(l => inPolygon(x, y, l.pts) || lineDistance(x, y, l.pts, true).d <= NEAR) ||
         map.rivers.some(o => o !== rv && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, false, 4), false).d <= NEAR);
       if (!ends) add('error', 'rivers', rv.id, `River "${title('rivers', rv)}" ends on dry land: its last point should reach the sea, a lake, or another river.`);
+      // A river stops where it meets the sea: only its last few units may lie off the land.
+      const line = sampleCurve(rv.pts, false, 4);
+      let left = lineLength(line);
+      for (let i = 0; i < line.length; i++) {
+        if (i) left -= Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]);
+        if (left > NEAR * 2 && !onLand(map, line[i][0], line[i][1]) && shoreDistance(map, line[i][0], line[i][1]) > NEAR) {
+          add('error', 'rivers', rv.id, `River "${title('rivers', rv)}" runs through the sea near ${Math.round(line[i][0])}, ${Math.round(line[i][1])}: it should end where it first reaches the coast.`);
+          break;
+        }
+      }
     }
     return out;
   }

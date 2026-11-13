@@ -55,7 +55,7 @@
 
   /* ---------- left: checks ---------- */
   function checks() {
-    if (!problems.length) return h('p.muted', 'No problems found. Every id is unique, roads join real settlements, settlements are on land, rivers reach water, and every border meets the sea or another border.');
+    if (!problems.length) return h('p.muted', 'No problems found. Every id is unique, roads join real settlements, settlements are on land, rivers reach water and stay out of the sea, paths start on a road, and every border meets the sea or another border.');
     return [h('p.muted', 'Click a problem to go to it.'), problems.map(p => h('button.row.problem', { type: 'button', class: p.level, onclick: () => E.select(p.kind, p.id, { fly: true }) },
       h('span.name', p.text), h('span.tag', p.level === 'error' ? 'problem' : 'note')))];
   }

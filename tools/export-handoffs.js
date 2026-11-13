@@ -549,6 +549,7 @@ Labels: ${WORLD.labels.map(l => `${l.text} (\`${l.id}\`, ${l.kind})`).join(', ')
 - closed shapes have 3 or more points and lines have 2 or more
 - every settlement is on land (within ${PM.NEAR} map units of a shore counts)
 - every river's last point reaches the sea, a lake, or another river (within ${PM.NEAR} map units)
+- no river runs through the sea: it ends where it first reaches the coast
 - every path starts on a road, a settlement, or another path, and stays on land
 - every border is a closed loop, or each of its ends reaches the sea or another border (within ${PM.NEAR} map units)
 - \`map-data.js\` holds exactly the map in \`primordium-map.json\`

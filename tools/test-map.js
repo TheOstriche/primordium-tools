@@ -44,6 +44,10 @@ check(broken(m => { m.lakes[0].pts.length = 2; }, 'at least 3 points'), 'an area
 check(broken(m => { m.rivers[0].pts.length = 1; }, 'at least 2 points'), 'a line with one point is reported');
 check(broken(m => { m.settlements[0].x = 30; m.settlements[0].y = 30; }, 'in the sea'), 'a settlement in the sea is reported');
 check(broken(m => { const r = m.rivers[0]; r.pts[r.pts.length - 1] = [700, 600]; }, 'dry land'), 'a river that stops on dry land is reported');
+check(broken(m => { const r = m.rivers[0]; r.pts.push([100, 100], [60, 60]); }, 'through the sea'), 'a river that runs on through the sea is reported');
+{ const m = copy(map), s = m.settlements[0]; m.roads = []; m.settlements = []; m.paths = [{ id: 'p-loose', name: '', pts: [[s.x, s.y], [s.x + 4, s.y]] }];
+  check(PM.check(m).some(p => p.level === 'warn' && p.text.includes('joins nothing')), 'a path that starts nowhere is noted'); }
+check(map.paths.length > 0 && map.settlements.some(s => s.type === 'village') && PM.TYPES.settlements.includes('village'), 'the map has paths and villages, and villages are a known type');
 check(broken(m => { const b = m.borders.find(o => !o.closed); b.pts[0] = [700, 560]; }, 'loose end'), 'a border that trails off in open country is reported');
 check(!broken(m => { m.borders.find(o => !o.closed).closed = true; }, 'loose end'), 'a closed border has no ends to check');
 check(PM.check(Object.assign(copy(map), { biomes: [Object.assign(copy(map.biomes[0]), { type: 'lava' })] })).some(p => p.level === 'warn' && p.text.includes('cannot draw')), 'an unknown terrain type is noted');

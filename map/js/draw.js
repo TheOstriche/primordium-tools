@@ -188,10 +188,11 @@
       if (chance > keep || !PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 3) continue;
       list.push([px, py, inside ? k : k * 0.85]);
     }
-    list.sort((a, c) => a[1] - c[1]);
-    const kinds = b.type === 'jungle' ? ['tJun', 'tJun', 'tDec2'] : conifer ? ['tCon', 'tCon', 'tCon2'] : ['tDec', 'tDec', 'tDec2', 'tDec3'];
-    return list.map(([x, y, k]) => `<use href="#${kinds[Math.floor(r() * kinds.length)]}" transform="translate(${f1(x)} ${f1(y)}) scale(${f1(k * 10) / 10})"/>`).join('');
+    const kinds = treeKinds(b.type);
+    return list.map(([x, y, k]) => [x, y, k, kinds[Math.floor(r() * kinds.length)]]);
   }
+  const treeKinds = type => (type === 'jungle' ? ['tJun', 'tJun', 'tDec2'] : type === 'darkforest' ? ['tCon', 'tCon', 'tCon2'] : ['tDec', 'tDec', 'tDec2', 'tDec3']);
+  const tree = (x, y, k, kind, cls) => `<use${cls ? ` class="${cls}"` : ''} href="#${kind}" transform="translate(${f1(x)} ${f1(y)}) scale(${f1(k * 10) / 10})"/>`;
   // One rounded hill: a lit hump, a shaded flank, and an inked brow. `c` is a PAL.peak entry.
   function hump(x, y, w, h, c) {
     return `<path d="M${f1(x - w)},${f1(y)}C${f1(x - w * 0.6)},${f1(y - h * 1.32)} ${f1(x + w * 0.5)},${f1(y - h * 1.32)} ${f1(x + w)},${f1(y)}Z" fill="url(#g${c.id}Lit)"/>` +
@@ -208,23 +209,46 @@
       if (chance > keep || !PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 5) continue;
       list.push([px, py, q, inside ? 1 : 0.7]);
     }
-    list.sort((a, c) => a[1] - c[1]);
-    return list.map(([x, y, q, k]) => { const w = (5.5 + q * 4.5) * k; return hump(x, y, w, w * (0.55 + q * 0.2), PAL.peak.hills); }).join('');
+    return list.map(([x, y, q, k]) => { const w = (5.5 + q * 4.5) * k; return [x, y, w, w * (0.55 + q * 0.2)]; });
   }
   // Lone trees and small copses dotted over open country, so the plains are not bare.
   const OPEN = { 'plains-dry': 0.45, grass: 1, hills: 0.8, scrub: 0.5, savanna: 0.5, farmland: 0.6 };
   function copses(map) {
     const r = PM.rng(4127), step = 44, kinds = ['tDec', 'tDec2', 'tDec3'];
-    let s = '';
+    const out = [];
     for (let y = step / 2; y < map.meta.height; y += step) for (let x = step / 2; x < map.meta.width; x += step) {
       const px = x + (r() - 0.5) * step * 0.9, py = y + (r() - 0.5) * step * 0.9, n = 1 + Math.floor(r() * 3), roll = r(), k = 0.55 + r() * 0.2, kind = kinds[Math.floor(r() * 3)];
       const offs = [[0, 0], [5 + r() * 2, 1.5 - r() * 3], [-4 - r() * 2, 2 - r() * 4]];
       if (!PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 6) continue;
       const under = PM.biomeAt(map, px, py), odds = under ? OPEN[under.type] || 0 : 1;
       if (roll > odds * 0.55 || map.lakes.some(l => PM.inPolygon(px, py, l.pts)) || map.ranges.some(g => PM.lineDistance(px, py, g.pts, !!g.closed).d < g.width * 0.7)) continue;
-      for (let i = 0; i < n; i++) s += `<use href="#${kind}" transform="translate(${f1(px + offs[i][0])} ${f1(py + offs[i][1])}) scale(${f1(k * 10) / 10})"/>`;
+      for (let i = 0; i < n; i++) out.push([px + offs[i][0], py + offs[i][1], k, kind]);
     }
-    return s;
+    return out;
+  }
+  // Everything that grows or rolls on the land, as one picture drawn back to front, so nothing farther away sits
+  // on top of something nearer. Nothing stands in a lake or a river. A hill takes the place of the trees that
+  // would stand on it and carries its own: a wooded hill inside a wood, the odd tree or two elsewhere.
+  function vegetation(map) {
+    const woods = b => b.type === 'forest' || b.type === 'darkforest' || b.type === 'jungle';
+    const rivers = map.rivers.map(rv => { const pts = PM.sampleCurve(rv.pts, false, 4); return { pts, w: Math.max(rv.width[0], rv.width[1]) / 2 + 2.6, box: PM.bbox(pts) }; });
+    const wet = (x, y) => map.lakes.some(l => PM.inPolygon(x, y, l.pts) || PM.lineDistance(x, y, l.pts, true).d < 3) ||
+      rivers.some(o => x > o.box[0] - o.w && x < o.box[2] + o.w && y > o.box[1] - o.w && y < o.box[3] + o.w && PM.lineDistance(x, y, o.pts, false).d < o.w);
+    const woodAt = (x, y) => { for (let i = map.biomes.length - 1; i >= 0; i--) if (woods(map.biomes[i]) && PM.inPolygon(x, y, map.biomes[i].pts)) return map.biomes[i]; return null; };
+    const items = [], humps = [];
+    for (const b of map.biomes) if (b.type === 'hills') for (const h of hills(map, b)) if (!wet(h[0], h[1])) humps.push(h);
+    const onHump = (x, y) => humps.some(([hx, hy, w, h]) => Math.abs(x - hx) < w * 1.08 && y < hy + 1.5 && y > hy - h * 1.3);
+    const r = PM.rng(7331);
+    for (const [x, y, w, h] of humps) {
+      const wood = woodAt(x, y), roll = r(), kinds = treeKinds(wood ? wood.type : 'forest'), k = Math.min(0.62, 0.4 + w * 0.02);
+      let s = hump(x, y, w, h, PAL.peak.hills);
+      const spots = wood ? [-0.5, 0, 0.48] : roll < 0.16 ? [-0.3, 0.3] : roll < 0.36 ? [0.12] : [];
+      for (const u of spots) { const v = u + (r() - 0.5) * 0.2; s += tree(x + v * w, y - h * 0.96 * (1 - v * v) + 1.4, k * (0.9 + r() * 0.25), kinds[Math.floor(r() * kinds.length)]); }
+      items.push([y, s]);
+    }
+    for (const b of map.biomes) if (woods(b)) for (const [x, y, k, kind] of trees(map, b)) if (!wet(x, y) && !onHump(x, y)) items.push([y, tree(x, y, k, kind)]);
+    for (const [x, y, k, kind] of copses(map)) if (!wet(x, y) && !onHump(x, y)) items.push([y, tree(x, y, k, kind, 'copse')]);
+    return items.sort((a, c) => a[0] - c[0]).map(i => i[1]).join('');
   }
 
   // Peaks along a ridge line: tallest down the middle of the band, smaller toward its edges and its two ends,
@@ -321,17 +345,54 @@
   }
 
   // A river's outline: narrow at its source (first point), widening to its mouth.
-  function riverShape(rv) {
-    const pts = PM.sampleCurve(rv.pts, false, 4), n = pts.length, [w0, w1] = rv.width, L = [], R = [];
+  // Where a river ends: in a lake, in another river, or (otherwise) the sea.
+  function riverEnd(map, rv) {
+    const [x, y] = rv.pts[rv.pts.length - 1];
+    if (map.lakes.some(l => PM.inPolygon(x, y, l.pts) || PM.lineDistance(x, y, l.pts, true).d <= PM.NEAR)) return 'lake';
+    if (map.rivers.some(o => o !== rv && o.pts.length > 1 && PM.lineDistance(x, y, PM.sampleCurve(o.pts, false, 4), false).d <= PM.NEAR)) return 'river';
+    return 'sea';
+  }
+  // A river's outline: narrow at the source, wider downstream. One that reaches the sea opens out into a mouth
+  // over its last stretch and runs on a little, so the land clip cuts it off exactly at the coast.
+  function riverShape(rv, sea) {
+    const pts = PM.sampleCurve(rv.pts, false, 3), [w0, w1] = rv.width, L = [], R = [];
+    if (sea && pts.length > 1) { const a = pts[pts.length - 2], b = pts[pts.length - 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; pts.push([b[0] + (b[0] - a[0]) / l * 7, b[1] + (b[1] - a[1]) / l * 7]); }
+    const n = pts.length, run = [0];
+    for (let i = 1; i < n; i++) run.push(run[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const total = run[n - 1] || 1;
     for (let i = 0; i < n; i++) {
-      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
-      const w = (w0 + (w1 - w0) * Math.pow(i / (n - 1 || 1), 0.8)) / 2;
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, left = total - run[i];
+      const w = (w0 + (w1 - w0) * Math.pow(run[i] / total, 0.8)) / 2 * (sea && left < 20 ? 1 + 1.5 * Math.pow(1 - left / 20, 2) : 1);
       L.push([pts[i][0] - dy / l * w, pts[i][1] + dx / l * w]);
       R.push([pts[i][0] + dy / l * w, pts[i][1] - dx / l * w]);
     }
     return 'M' + poly(L.concat(R.reverse())) + 'Z';
   }
 
+  // Roads that share a stretch are drawn there once: major roads first, then each road only where no road
+  // already drawn runs (within a unit). So roads visibly merge into one and fork apart again.
+  function roadRuns(map) {
+    const grid = new Map(), key = (x, y) => Math.floor(x / 2) * 100003 + Math.floor(y / 2), out = [];
+    const covered = (x, y) => { for (let dy = -2; dy <= 2; dy += 2) for (let dx = -2; dx <= 2; dx += 2) { const c = grid.get(key(x + dx, y + dy)); if (c) for (let i = 0; i < c.length; i += 2) if ((c[i] - x) * (c[i] - x) + (c[i + 1] - y) * (c[i + 1] - y) < 1) return true; } return false; };
+    for (const rd of map.roads.slice().sort((a, b) => b.major - a.major)) {
+      const line = PM.roadLine(map, rd); if (line.length < 2) continue;
+      const pts = [];
+      for (let i = 0; i < line.length - 1; i++) { const a = line[i], b = line[i + 1], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 1.2)); for (let j = 0; j < n; j++) pts.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); }
+      pts.push(line[line.length - 1]);
+      const hid = pts.map(p => covered(p[0], p[1]));
+      let d = '';
+      for (let i = 0; i < pts.length; i++) {
+        if (hid[i]) continue;
+        let j = i; while (j + 1 < pts.length && !hid[j + 1]) j++;
+        const run = pts.slice(Math.max(0, i - 1), Math.min(pts.length, j + 2));
+        if (run.length > 2) d += 'M' + poly(run);
+        i = j;
+      }
+      for (const p of pts) { const k = key(p[0], p[1]); let c = grid.get(k); if (!c) grid.set(k, c = []); c.push(p[0], p[1]); }
+      if (d) out.push([rd, d]);
+    }
+    return out;
+  }
   // A small bridge wherever a road crosses a river: a pale deck between two dark rails, as long as the river is wide.
   function bridges(map) {
     let s = '';
@@ -428,36 +489,38 @@
         `<g fill="none" stroke="${PAL.landShade}" stroke-linejoin="round"><use href="#coastSoft" stroke-width="24" opacity=".08"/><use href="#coastSoft" stroke-width="11" opacity=".1"/><use href="#coastAll" stroke-width="4.5" opacity=".14"/></g></g>`;
     } },
     { id: 'coastline', needs: ['coast'], toggles: [], draw: (map, ctx) => `<use href="#coastAll" fill="none" stroke="${PAL.ink}" stroke-linejoin="round" ${sw(ctx, 1.25)}/>` },
-    { id: 'water', needs: ['rivers', 'lakes'], toggles: ['rivers'], draw(map, ctx) {
+    { id: 'water', needs: ['rivers', 'lakes', 'coast'], toggles: ['rivers'], draw(map, ctx) {
       if (!ctx.vis.rivers) return '';
-      let s = '';
-      for (const rv of map.rivers) s += `<path d="${cached('v' + JSON.stringify(rv), () => riverShape(rv))}" fill="${PAL.water}" stroke="${PAL.waterEdge}" stroke-width=".6" stroke-linejoin="round"/>`;
+      // Rivers are cut off at the coast (the land clip), which opens the coastline at each mouth; a pale fan of
+      // river water spreads into the sea beyond it.
+      let s = '', fans = '';
+      for (const rv of map.rivers) {
+        const sea = riverEnd(map, rv) === 'sea', [x, y] = rv.pts[rv.pts.length - 1], R = rv.width[1] * 1.6 + 3;
+        if (sea) fans += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(R * 1.7)}" fill="${PAL.waterLight}" opacity=".16"/><circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(R)}" fill="${PAL.waterLight}" opacity=".22"/>`;
+        s += `<path d="${cached('v' + sea + JSON.stringify(rv), () => riverShape(rv, sea))}" fill="${PAL.water}" stroke="${PAL.waterEdge}" stroke-width=".6" stroke-linejoin="round"/>`;
+      }
       // A light thread down the middle of each river, so it reads as running water.
       for (const rv of map.rivers) s += `<path d="${smoothPath(rv.pts, false)}" fill="none" stroke="${PAL.waterLight}" stroke-width="${f1(Math.min(rv.width[0], rv.width[1]) * 0.3)}" opacity=".55" stroke-linecap="round"/>`;
+      s = `${fans}<g clip-path="url(#landClip)">${s}</g>`;
       for (const lk of map.lakes) {
-        const d = smoothPath(lk.pts, true, 0.5);
+        // A little seeded raggedness, so no lake is a clean oval.
+        const d = smoothPath(roughen(lk.pts, PM.hash(lk.id), 1.1, 2), true, 0.5);
         s += `<path d="${d}" fill="${PAL.water}" stroke="${PAL.waterLight}" stroke-width="4.5" stroke-opacity=".35"/><path d="${d}" fill="${PAL.water}" stroke="${PAL.waterEdge}" stroke-width=".9"/>`;
       }
       return s;
     } },
     // Everything that grows or rolls on the land: woods, hills, and copses on open country.
-    { id: 'trees', needs: ['biomes', 'coast', 'lakes', 'ranges'], toggles: ['trees'], draw(map, ctx) {
+    { id: 'trees', needs: ['biomes', 'coast', 'lakes', 'ranges', 'rivers'], toggles: ['trees'], draw(map, ctx) {
       if (!ctx.vis.trees) return '';
-      const coast = PM.hash(JSON.stringify(map.coast));
-      const woods = b => b.type === 'forest' || b.type === 'darkforest' || b.type === 'jungle';
-      return `<g class="copse">${cached('k' + coast + JSON.stringify([map.biomes, map.lakes, map.ranges]), () => copses(map))}</g>` +
-        map.biomes.filter(b => b.type === 'hills').map(b => cached('h' + JSON.stringify(b) + coast, () => hills(map, b))).join('') +
-        map.biomes.filter(woods).map(b => cached('t' + JSON.stringify(b) + coast, () => trees(map, b))).join('');
+      return cached('veg' + PM.hash(JSON.stringify(map.coast)) + JSON.stringify([map.biomes, map.lakes, map.ranges, map.rivers]), () => vegetation(map));
     } },
     { id: 'roads', needs: ['roads', 'paths', 'settlements', 'rivers'], toggles: ['roads'], draw(map, ctx) {
       if (!ctx.vis.roads) return '';
       let s = `<g fill="none" stroke-linecap="round" stroke-linejoin="round">`;
       // Side paths: fine dotted tracks that appear once you zoom in a little.
       for (const p of map.paths) s += `<path class="trail" d="${smoothPath(p.pts, !!p.closed)}" stroke="${PAL.road}" opacity=".8" ${dashed(ctx, 0.8, 0.6, 2.4)}/>`;
-      for (const rd of map.roads) {
-        const pts = PM.roadLine(map, rd);
-        if (pts.length < 2) continue;
-        const d = 'M' + poly(pts), cls = rd.major ? '' : ' class="minor-road"';
+      for (const [rd, d] of roadRuns(map)) {
+        const cls = rd.major ? '' : ' class="minor-road"';
         s += `<g${cls}><path d="${d}" stroke="${PAL.roadCase}" opacity=".4" ${sw(ctx, rd.major ? 2.8 : 1.8)}/>` +
           `<path d="${d}" stroke="${PAL.road}" ${rd.major ? dashed(ctx, 1.5, 5, 3) : dashed(ctx, 1, 2, 3)}/></g>`;
       }

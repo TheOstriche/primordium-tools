@@ -30,13 +30,14 @@ Press **Edit** (top right). It turns to **Editing**, and Add, Undo, Redo, and Sa
 - A road joins two settlements. Select it and drag its halfway handle to bend it, for example through a mountain pass.
 - **Paths** are side tracks (Add → Path): click along the route, starting on a road or a settlement. They can end anywhere. They and the villages show once you zoom in.
 - **Villages** are settlements of type **village**. The ones on the map were scattered automatically and have no names: name, move or delete them freely.
-- **Bridges** draw themselves wherever a road crosses a river.
+- **Bridges** draw themselves wherever a road crosses a river, and a river that reaches the sea opens into a mouth by itself.
+- **Re-laying roads:** after moving towns, rivers or mountains, run `node tools/route-roads.js` in the Primordium Tools folder (or ask Claude to). It lays every road and path over the ground again by the road rules: round water and mountains, merging where they head the same way, with paths joining the nearest road. It replaces any bends you made by hand.
 - **Borders** follow one rule: a border is a closed loop, or it runs until each end reaches the sea or another border. Drag an end onto the coast or onto another border; the Checks tab tells you if one is left loose.
 - **Hills:** add a terrain area of type **hills** wherever the country should roll. Woods, hills, fields round towns, lone trees, and ships off ports all draw themselves.
 - **Terrain areas** blend into whatever is next to them, so their outlines only need to be roughly right. Later areas in the list paint over earlier ones (**Bring forward** / **Send back**). Types you can choose include hills, scrub, savanna, farmland, marsh, jungle, badlands, and snow as well as the ones the map uses now.
 - **More → Map details and scale** sets the map's name, version, and **scale**.
 - **Ctrl+Z** undoes, **Ctrl+Y** redoes, **Delete** removes the selection.
-- The **Checks** tab (in Browse) lists problems (a settlement in the sea, a river that ends on dry land, a road to nowhere, a border with a loose end). Click one to go to it.
+- The **Checks** tab (in Browse) lists problems (a settlement in the sea, a river that ends on dry land, a road to nowhere, a river running through the sea, a path that starts nowhere, a border with a loose end). Click one to go to it.
 
 ## Saving
 
