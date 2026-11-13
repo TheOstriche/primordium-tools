@@ -105,7 +105,11 @@
   const shoreDistance = (map, x, y) => Math.min(...map.coast.map(c => lineDistance(x, y, c.pts, true).d));
   // The topmost terrain area at a point (later areas draw over earlier ones), or null for the base plains.
   function biomeAt(map, x, y) {
-    for (let i = map.biomes.length - 1; i >= 0; i--) if (inPolygon(x, y, map.biomes[i].pts)) return map.biomes[i];
+    for (let i = map.biomes.length - 1; i >= 0; i--) {
+      const b = map.biomes[i];
+      // An area with `shore` set reaches only that far in from the sea (its painted edge fades a little sooner).
+      if (inPolygon(x, y, b.pts) && !(b.shore > 0 && shoreDistance(map, x, y) > b.shore * 0.8)) return b;
+    }
     return null;
   }
   // The line a road follows: through its `via` points, or a gentle seeded curve between its two settlements.
@@ -249,7 +253,7 @@
           notes.push(was ? `A second ${K.one.toLowerCase()} with the id "${was}" was renamed "${id}".` : `A ${K.one.toLowerCase()} with no id was named "${id}".`);
         }
         const f = { id };
-        if (kind === 'biomes') f.type = str(src.type, 30) || 'grass';
+        if (kind === 'biomes') { f.type = str(src.type, 30) || 'grass'; const shore = num(src.shore, 0, 2000, 0); if (shore > 0) f.shore = shore; }
         if (kind !== 'borders' && kind !== 'roads' && kind !== 'labels') f.name = str(src.name, LIMITS.name);
         if (kind === 'ranges') { f.type = str(src.type, 30) || 'mountain'; f.width = num(src.width, 4, 400, 30); }
         if (kind === 'rivers') { const w = Array.isArray(src.width) ? src.width : [src.width, src.width]; f.width = [num(w[0], 0.2, 60, 1.5), num(w[1], 0.2, 60, 4)]; }

@@ -92,6 +92,7 @@
 
     if (kind === 'settlements' || kind === 'labels') out.push(h('div.pair', row('X', number('x', f.x, prop('x'))), row('Y', number('y', f.y, prop('y')))));
     if (kind === 'labels') out.push(h('div.pair', row('Size', number('size', f.size, prop('size'), { min: 4, max: 400 })), row('Rotation (degrees)', number('rot', f.rot, prop('rot'), { min: -360, max: 360 }))));
+    if (kind === 'biomes') out.push(row('Only near the shore', number('shore', f.shore || 0, v => set(cur => { if (v > 0) cur.shore = v; else delete cur.shore; }), { min: 0, max: 2000 }), 'In map units from the sea. 0 means the whole area. Use it for beaches: sand that gives way to other ground inland.'));
     if (kind === 'ranges') out.push(row('Width of the band', number('width', f.width, prop('width'), { min: 4, max: 400 }), 'In map units. Wider bands grow more rows of taller peaks.'));
     if (kind === 'rivers') out.push(h('div.pair',
       row('Width at source', number('w0', f.width[0], v => set(cur => { cur.width[0] = v; }), { min: 0.2, max: 60 })),

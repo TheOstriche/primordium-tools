@@ -153,7 +153,17 @@
     }
     if (opts.areas !== false) for (let i = 0; i < map.biomes.length; i++) {
       const b = map.biomes[i], st = styles[b.type] || styles.unknown;
-      zone({ style: st, id: Math.min(i + 1, 249), feather: st.feather || 13, paint() { mg.fillStyle = '#000'; trace(b.pts, true); mg.fill(); } }, PM.bbox(b.pts));
+      zone({ style: st, id: Math.min(i + 1, 249), feather: st.feather || 13, paint() {
+        mg.fillStyle = '#000'; trace(b.pts, true); mg.fill();
+        // An area with `shore` set shows only within that many units of the sea (a beach, a coastal marsh):
+        // what was painted is kept only inside one wide stroke along every coast.
+        if (b.shore > 0) {
+          mg.globalCompositeOperation = 'destination-in'; mg.strokeStyle = '#000'; mg.lineWidth = 2 * b.shore / upp; mg.lineJoin = 'round';
+          mg.beginPath();
+          for (const c of map.coast) { c.pts.forEach((p, k) => { const e = toPx(p); if (k) mg.lineTo(e[0], e[1]); else mg.moveTo(e[0], e[1]); }); mg.closePath(); }
+          mg.stroke(); mg.globalCompositeOperation = 'source-over';
+        }
+      } }, PM.bbox(b.pts));
       if (!(await wanted())) return null;
     }
     // Tilled fields round every settlement that stands on farmable ground: larger round a capital than a town.

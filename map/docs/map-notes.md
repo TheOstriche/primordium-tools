@@ -25,6 +25,10 @@ Decisions about what the world *is* (lore, names, what explains each strange lan
 - **Paths and villages added (the owner's request):** a new list, `paths`, holds side tracks; 170 unnamed settlements of the new type `village` were placed, thick along rivers and roads on good ground and rare in the wastes, with tracks joining the ones that are off a road. Their places are generated first guesses, not canon; the owner names, moves or deletes them.
 - **Water check and additions (2026-11-13, the owner's request):** every river was checked: none runs through the sea, crosses a range or another river, and no lake has two outlets. Three were cut back to where they first meet the coast (`north-run`, `dwarf-run`, and the new `frost-run`), and `etriun-run` now goes east from the Etriun lake to the nearest shore (it had been running north along the coast, in the sea). Lyra's Well has an uneven shore instead of an oval. Water added as first guesses, all easy to delete: `aurau-north` (from the Aurau hills to the coast by the capital), `frost-run` (meltwater north off Vira's Belt), `kato-tarn` (a small lake where `vidriun-run` rises), `dunes-oasis` (a spring-fed pool in the Southern Dunes), and `marsh-west-mouth` (a marsh where the great river meets the sea).
 - **Road rules (2026-11-13, the owner's request):** roads now merge, fork and cross by fixed rules, written at the top of `tools/route-roads.js`, and paths are offshoots that join the nearest road or path.
+- **Drune is not all sand (2026-11-13, the owner's decision):** Drune has sandy beaches, not sand throughout. The old sand area (`drune-sands`) now shows only within 22 miles of the sea (its new `shore` value), over a new area of dry scrub, `drune-scrub`, with the same outline. Which ground lies inland (scrub) was the app-side's choice.
+- **Roughening run (the owner's request):** borders, terrain outlines and ridge lines were all given small seeded irregularities (a few miles) so nothing is ruler-straight; border ends were put back onto the border or shore they meet. Coastlines and settlements were not moved.
+- **Small water (the owner's request for more small lakes and rivers, especially mountain runoff):** 25 runoff streams down the flanks of Vira's Belt, its northern spur and Kato's Peaks, 6 of them rising in tarns; 16 ponds and small lakes on open ground, forest and ice, 10 with a stream running out. Each stream takes the easiest way to the nearest water. Ids `stream-N`, `tarn-N`, `pond-N`; all unnamed first guesses. The map now has 51 rivers and 28 lakes (it had 16 and 6).
+- **Noticed in the logic run, left alone:** `vira-hold`, `town-21` and `town-34` stand inside Vira's Belt (as on the original map), and the label "The Obsidian Coast" is centred just off the land.
 
 ## Names the data uses (from the owner's map; keep them spelled exactly)
 
@@ -38,7 +42,7 @@ Aurau Imperian, Trinimar, The Dwarven Plains, The Frostlands, Etriun, Isles of D
 4. The Frostlands meet the plains at a thin ridge.
 5. The Scar, the Obsidian Coast and the Cracked Mesa should be tied together as one event.
 6. Vidriun Forest has hard edges.
-7. The "Isles" of Drune are mostly mainland.
+7. The "Isles" of Drune are mostly mainland. (Its ground is settled: scrub with sandy shores.)
 8. Coastlines need fjords, deltas and bays.
 9. Fixed: roads go round the Scar and the ranges.
 10. Decided: 1 map unit is 1 mile.

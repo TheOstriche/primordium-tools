@@ -47,6 +47,9 @@ check(broken(m => { const r = m.rivers[0]; r.pts[r.pts.length - 1] = [700, 600];
 check(broken(m => { const r = m.rivers[0]; r.pts.push([100, 100], [60, 60]); }, 'through the sea'), 'a river that runs on through the sea is reported');
 { const m = copy(map), s = m.settlements[0]; m.roads = []; m.settlements = []; m.paths = [{ id: 'p-loose', name: '', pts: [[s.x, s.y], [s.x + 4, s.y]] }];
   check(PM.check(m).some(p => p.level === 'warn' && p.text.includes('joins nothing')), 'a path that starts nowhere is noted'); }
+{ const m = copy(map), b = { id: 'beach-test', type: 'sand', name: '', shore: 10, pts: [[0, 0], [m.meta.width, 0], [m.meta.width, m.meta.height], [0, m.meta.height]] }; m.biomes.push(b);
+  const s = m.settlements.find(t => PM.shoreDistance(m, t.x, t.y) > 40 && PM.onLand(m, t.x, t.y)), p = m.settlements.find(t => PM.shoreDistance(m, t.x, t.y) < 6 && PM.onLand(m, t.x, t.y));
+  check(PM.biomeAt(m, p.x, p.y) === b && PM.biomeAt(m, s.x, s.y) !== b && PM.shaped(m).biomes.find(q => q.id === 'beach-test').shore === 10, 'a shore-only terrain area counts near the sea and not inland, and survives loading'); }
 check(map.paths.length > 0 && map.settlements.some(s => s.type === 'village') && PM.TYPES.settlements.includes('village'), 'the map has paths and villages, and villages are a known type');
 check(broken(m => { const b = m.borders.find(o => !o.closed); b.pts[0] = [700, 560]; }, 'loose end'), 'a border that trails off in open country is reported');
 check(!broken(m => { m.borders.find(o => !o.closed).closed = true; }, 'loose end'), 'a closed border has no ends to check');

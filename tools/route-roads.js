@@ -7,7 +7,7 @@
 // The road rules
 //   1. Ground. A road never crosses the sea or a lake. It goes round a mountain range unless crossing is far
 //      shorter, avoids the Scar and other rough ground, keeps a little back from the shore, and crosses a river
-//      as seldom as it can and squarely.
+//      as seldom as it can and squarely (a small stream is forded far more readily).
 //   2. Merging. Roads are laid major first. A later road is cheaper where a road already runs, so roads heading
 //      the same way join into one and travel together. Where they share ground they share the very same line
 //      (the app draws it once). A road never runs alongside another just a little apart: it joins or keeps away.
@@ -55,7 +55,9 @@ function field(lines, reach, minus) {
   return d;
 }
 const dRange = field(m.ranges.map(g => dense(g.pts, !!g.closed, true)), 30, m.ranges.map(g => g.width / 2));
-const dRiver = field(m.rivers.map(r => dense(r.pts, false, true)), 12);
+// A stream (under 2.6 units wide at its mouth) is easy to ford; a river is a real obstacle.
+const dRiver = field(m.rivers.filter(r => r.width[1] >= 2.6).map(r => dense(r.pts, false, true)), 12);
+const dStream = field(m.rivers.filter(r => r.width[1] < 2.6).map(r => dense(r.pts, false, true)), 6);
 const dShore = field(m.coast.map(c => dense(c.pts, true, false)), 8);
 // How much harder each kind of ground is to build a road over than open plains.
 const ROUGH = { forest: 1.45, darkforest: 1.6, jungle: 1.8, hills: 1.3, desert: 1.35, sand: 1.1, scar: 3.2, obsidian: 1.7, ice: 1.9, ash: 1.5, mesa: 1.5, rock: 1.6, swamp: 2, marsh: 2, tundra: 1.4, badlands: 1.6, snow: 2 };
@@ -70,7 +72,7 @@ function ground(forPath) {
     let v = 1 + 0.9 * noise(x, y, 26) + 0.5 * noise(x + 500, y + 300, 11);
     v *= b && ROUGH[b.type] ? (forPath ? 1 + (ROUGH[b.type] - 1) * 0.5 : ROUGH[b.type]) : 1;
     if (dRange[i] < 2) v *= forPath ? 2.4 : 7.5; else if (dRange[i] < 9) v *= forPath ? 1.4 : 2;
-    if (dRiver[i] < 2.6) v *= forPath ? 4 : 6;
+    if (dRiver[i] < 2.6) v *= forPath ? 4 : 6; else if (dStream[i] < 2.2) v *= forPath ? 1.5 : 2;
     if (dShore[i] < 4) v *= 1.5;
     c[i] = v;
   }
