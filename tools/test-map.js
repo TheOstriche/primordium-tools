@@ -20,7 +20,7 @@ check(same(map.meta, raw.meta) && PM.LISTS.every(k => same(map[k], raw[k])), 're
 const problems = PM.check(map), errors = problems.filter(p => p.level === 'error');
 // These are the five rules from the map handoff: unique ids, roads join real settlements, shapes have enough
 // points, settlements are on land, and rivers end in the sea, a lake, or another river.
-check(!errors.length, 'the map passes every check (ids, roads, point counts, settlements on land, rivers reach water)', errors.map(p => p.text));
+check(!errors.length, 'the map passes every check (ids, roads, point counts, settlements on land, rivers reach water, borders meet)', errors.map(p => p.text));
 check(!problems.some(p => p.level === 'warn'), 'the map has no notes either (unknown types, repeated roads)', problems.filter(p => p.level === 'warn').map(p => p.text));
 check(map.coast.some(c => c.id === 'mainland'), 'the mainland coastline exists');
 const inside = p => p[0] >= -200 && p[0] <= map.meta.width + 200 && p[1] >= -200 && p[1] <= map.meta.height + 200;
@@ -44,6 +44,8 @@ check(broken(m => { m.lakes[0].pts.length = 2; }, 'at least 3 points'), 'an area
 check(broken(m => { m.rivers[0].pts.length = 1; }, 'at least 2 points'), 'a line with one point is reported');
 check(broken(m => { m.settlements[0].x = 30; m.settlements[0].y = 30; }, 'in the sea'), 'a settlement in the sea is reported');
 check(broken(m => { const r = m.rivers[0]; r.pts[r.pts.length - 1] = [700, 600]; }, 'dry land'), 'a river that stops on dry land is reported');
+check(broken(m => { const b = m.borders.find(o => !o.closed); b.pts[0] = [700, 560]; }, 'loose end'), 'a border that trails off in open country is reported');
+check(!broken(m => { m.borders.find(o => !o.closed).closed = true; }, 'loose end'), 'a closed border has no ends to check');
 check(PM.check(Object.assign(copy(map), { biomes: [Object.assign(copy(map.biomes[0]), { type: 'lava' })] })).some(p => p.level === 'warn' && p.text.includes('cannot draw')), 'an unknown terrain type is noted');
 
 /* ---------- outside data is forced into shape ---------- */

@@ -35,6 +35,7 @@
     terrain: {
       base: { a: '#a6a363', b: '#b9b072', c: '#8f9a56', mark: 'tuft', ink: '#6f7038', gap: 26, sparse: 0.62, markAlpha: 0.5 },
       strand: { a: '#d8c890', b: '#e4d6a4', rough: 0.5, soft: 0.3 },
+      fields: { a: '#b9ad58', b: '#cfc06a', c: '#8fa04a', rough: 1.5, soft: 0.16, mark: 'furrow', ink: '#7a7034', gap: 7, sparse: 0.2, markAlpha: 0.55 },
       unknown: { a: '#999999', b: '#aaaaaa' },
       'plains-dry': { a: '#b9a660', b: '#c9b673', c: '#a39a5a', mark: 'tuft', ink: '#8a7a3c', gap: 22, sparse: 0.5, feather: 22 },
       sand: { a: '#d6b16c', b: '#e2c487', c: '#c9a560', mark: 'dune', ink: '#a8884a', gap: 26, sparse: 0.45, feather: 12 },
@@ -53,7 +54,7 @@
       swamp: { a: '#66744d', b: '#7a8660', c: '#4d6258', mark: 'reed', ink: '#3d4a2e', gap: 15, sparse: 0.35 },
       marsh: { a: '#5f7a66', b: '#76907a', c: '#4a6b70', mark: 'reed', ink: '#34493c', gap: 13, sparse: 0.3 },
       grass: { a: '#a3a455', b: '#b4b266', c: '#8d9848', mark: 'tuft', ink: '#6d7434', gap: 15, sparse: 0.35, feather: 18 },
-      hills: { a: '#9b9a5c', b: '#b3a96e', c: '#84854c', mark: 'hill', ink: '#5e5a34', gap: 20, sparse: 0.3 },
+      hills: { a: '#9d9c5a', b: '#b5ac6c', c: '#84874a', mark: 'tuft', ink: '#6a6a38', gap: 18, sparse: 0.45, feather: 16 },
       scrub: { a: '#b0a567', b: '#c0b47a', c: '#8f945a', mark: 'bush', ink: '#66713a', gap: 14, sparse: 0.4, markAlpha: 0.7 },
       savanna: { a: '#c4b266', b: '#d3c27c', c: '#a89c52', mark: 'bush', ink: '#7a7a3a', gap: 24, sparse: 0.55, markAlpha: 0.7, feather: 20 },
       farmland: { a: '#b7b057', b: '#cdbf66', c: '#93a24c', mark: 'furrow', ink: '#7d7434', gap: 16, sparse: 0.25, markAlpha: 0.5 },
@@ -65,10 +66,13 @@
       'under-butte': { a: '#c08248', b: '#d09a5e', c: '#a56c38', rough: 1, strength: 0.5 }
     },
     border: '#5a231c', borderBand: '#7a2e24',
+    // Peaks and hills: the sunlit face and the shaded face. Each fades out toward its foot, so it grows out of
+    // the painted ground instead of standing on it.
     peak: {
-      mountain: { lit: '#b89468', shade: '#6d4c2f' },
-      snow: { lit: '#d3d7d6', shade: '#7c8690' },
-      volcano: { lit: '#5d4d46', shade: '#2a2220' }
+      mountain: { lit: '#c2a075', shade: '#6b4a2e', id: 'Mtn' },
+      snow: { lit: '#dfe3e2', shade: '#7c8892', id: 'Snow' },
+      volcano: { lit: '#6a5850', shade: '#2a2220', id: 'Vol' },
+      hills: { lit: '#bdb878', shade: '#7c7a44', id: 'Hill' }
     }
   };
   const FONT = { realm: "'IM Fell English SC', 'Palatino Linotype', Georgia, serif", text: "Alegreya, Georgia, serif", ui: "'Alegreya Sans', 'Segoe UI', sans-serif" };
@@ -185,8 +189,42 @@
       list.push([px, py, inside ? k : k * 0.85]);
     }
     list.sort((a, c) => a[1] - c[1]);
-    const id = conifer ? 'tCon' : 'tDec';
-    return list.map(([x, y, k]) => `<use href="#${id}" transform="translate(${f1(x)} ${f1(y)}) scale(${f1(k * 10) / 10})"/>`).join('');
+    const kinds = b.type === 'jungle' ? ['tJun', 'tJun', 'tDec2'] : conifer ? ['tCon', 'tCon', 'tCon2'] : ['tDec', 'tDec', 'tDec2', 'tDec3'];
+    return list.map(([x, y, k]) => `<use href="#${kinds[Math.floor(r() * kinds.length)]}" transform="translate(${f1(x)} ${f1(y)}) scale(${f1(k * 10) / 10})"/>`).join('');
+  }
+  // One rounded hill: a lit hump, a shaded flank, and an inked brow. `c` is a PAL.peak entry.
+  function hump(x, y, w, h, c) {
+    return `<path d="M${f1(x - w)},${f1(y)}C${f1(x - w * 0.6)},${f1(y - h * 1.32)} ${f1(x + w * 0.5)},${f1(y - h * 1.32)} ${f1(x + w)},${f1(y)}Z" fill="url(#g${c.id}Lit)"/>` +
+      `<path d="M${f1(x + w * 0.02)},${f1(y - h * 0.98)}C${f1(x + w * 0.5)},${f1(y - h * 0.92)} ${f1(x + w * 0.86)},${f1(y - h * 0.4)} ${f1(x + w)},${f1(y)}H${f1(x + w * 0.35)}Q${f1(x + w * 0.3)},${f1(y - h * 0.55)} ${f1(x + w * 0.02)},${f1(y - h * 0.98)}Z" fill="url(#g${c.id}Shade)"/>` +
+      `<path d="M${f1(x - w * 0.8)},${f1(y - h * 0.42)}C${f1(x - w * 0.5)},${f1(y - h * 1.2)} ${f1(x + w * 0.45)},${f1(y - h * 1.2)} ${f1(x + w * 0.82)},${f1(y - h * 0.4)}" fill="none" stroke="${PAL.ink}" stroke-width=".55" stroke-linecap="round" opacity=".8"/>`;
+  }
+  // Rolling hills over a hills area: fewer toward its edge, like the trees of a wood.
+  function hills(map, b) {
+    const r = PM.rng(PM.hash(b.id)), sp = 15, reach = 14, [x0, y0, x1, y1] = PM.bbox(b.pts), list = [];
+    for (let y = y0 - reach, row = 0; y <= y1 + reach; y += sp * 0.62, row++) for (let x = x0 - reach + (row % 2) * sp / 2; x <= x1 + reach; x += sp) {
+      const px = x + (r() - 0.5) * sp * 0.7, py = y + (r() - 0.5) * sp * 0.4, q = r(), chance = r();
+      const inside = PM.inPolygon(px, py, b.pts), d = PM.lineDistance(px, py, b.pts, true).d;
+      const keep = inside ? 0.45 + Math.min(1, d / reach) * 0.4 : 0.3 * (1 - Math.min(1, d / reach));
+      if (chance > keep || !PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 5) continue;
+      list.push([px, py, q, inside ? 1 : 0.7]);
+    }
+    list.sort((a, c) => a[1] - c[1]);
+    return list.map(([x, y, q, k]) => { const w = (5.5 + q * 4.5) * k; return hump(x, y, w, w * (0.55 + q * 0.2), PAL.peak.hills); }).join('');
+  }
+  // Lone trees and small copses dotted over open country, so the plains are not bare.
+  const OPEN = { 'plains-dry': 0.45, grass: 1, hills: 0.8, scrub: 0.5, savanna: 0.5, farmland: 0.6 };
+  function copses(map) {
+    const r = PM.rng(4127), step = 44, kinds = ['tDec', 'tDec2', 'tDec3'];
+    let s = '';
+    for (let y = step / 2; y < map.meta.height; y += step) for (let x = step / 2; x < map.meta.width; x += step) {
+      const px = x + (r() - 0.5) * step * 0.9, py = y + (r() - 0.5) * step * 0.9, n = 1 + Math.floor(r() * 3), roll = r(), k = 0.55 + r() * 0.2, kind = kinds[Math.floor(r() * 3)];
+      const offs = [[0, 0], [5 + r() * 2, 1.5 - r() * 3], [-4 - r() * 2, 2 - r() * 4]];
+      if (!PM.onLand(map, px, py) || PM.shoreDistance(map, px, py) < 6) continue;
+      const under = PM.biomeAt(map, px, py), odds = under ? OPEN[under.type] || 0 : 1;
+      if (roll > odds * 0.55 || map.lakes.some(l => PM.inPolygon(px, py, l.pts)) || map.ranges.some(g => PM.lineDistance(px, py, g.pts, !!g.closed).d < g.width * 0.7)) continue;
+      for (let i = 0; i < n; i++) s += `<use href="#${kind}" transform="translate(${f1(px + offs[i][0])} ${f1(py + offs[i][1])}) scale(${f1(k * 10) / 10})"/>`;
+    }
+    return s;
   }
 
   // Peaks along a ridge line: tallest down the middle of the band, smaller toward its edges and its two ends,
@@ -214,44 +252,72 @@
       run += L;
     }
     out.sort((a, b) => a.y - b.y);
-    const c = PAL.peak[type] || PAL.peak.mountain, ink = PAL.ink;
+    const c = PAL.peak[type] || PAL.peak.mountain, ink = PAL.ink, P = p => f1(p[0]) + ',' + f1(p[1]);
+    const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
     let s = '';
     for (const p of out) {
       const { x, y, q } = p;
-      if (p.hill) {
-        const w = (4.5 + q * 3) * p.size, h = w * 0.62;
-        s += `<path d="M${f1(x - w)},${f1(y)}C${f1(x - w * 0.55)},${f1(y - h * 1.3)} ${f1(x + w * 0.55)},${f1(y - h * 1.3)} ${f1(x + w)},${f1(y)}Z" fill="${c.lit}" stroke="${ink}" stroke-width=".55"/>` +
-          `<path d="M${f1(x + w * 0.05)},${f1(y - h * 0.97)}C${f1(x + w * 0.5)},${f1(y - h * 0.9)} ${f1(x + w * 0.85)},${f1(y - h * 0.4)} ${f1(x + w)},${f1(y)}L${f1(x + w * 0.35)},${f1(y)}Z" fill="${c.shade}" opacity=".75"/>`;
-        continue;
-      }
+      // A handful of further random numbers from the one each peak was given, so its shape is its own.
+      const fr = k => { const v = Math.sin(q * 91.7 + k * 37.3) * 43758.5453; return v - Math.floor(v); };
+      if (p.hill) { const w = (4.5 + q * 3.5) * p.size; s += hump(x, y, w, w * 0.62, c); continue; }
       if (type === 'butte') {
         const w = 10 + q * 8, h = 7 + q * 4;
-        s += `<path d="M${f1(x - w)},${f1(y)}L${f1(x - w * 0.62)},${f1(y - h)}H${f1(x + w * 0.62)}L${f1(x + w)},${f1(y)}Z" fill="#b8743c" stroke="#5c3518" stroke-width=".8" stroke-linejoin="round"/>` +
-          `<path d="M${f1(x + w * 0.1)},${f1(y - h)}H${f1(x + w * 0.62)}L${f1(x + w)},${f1(y)}H${f1(x + w * 0.3)}Z" fill="#7c4a22" opacity=".7"/>` +
-          `<path d="M${f1(x - w * 0.62)},${f1(y - h)}H${f1(x + w * 0.62)}" stroke="#e6b27a" stroke-width="1.3" stroke-linecap="round"/>` +
-          `<path d="M${f1(x - w * 0.35)},${f1(y - h * 0.9)}v${f1(h * 0.55)}M${f1(x - w * 0.05)},${f1(y - h * 0.9)}v${f1(h * 0.4)}" stroke="#5c3518" stroke-width=".5" opacity=".6"/>`;
+        s += `<ellipse cx="${f1(x + w * 0.15)}" cy="${f1(y + 0.6)}" rx="${f1(w * 1.05)}" ry="${f1(h * 0.22)}" fill="#5c3518" opacity=".28"/>` +
+          `<path d="M${f1(x - w)},${f1(y)}L${f1(x - w * 0.66)},${f1(y - h * 0.86)}L${f1(x - w * 0.6)},${f1(y - h)}H${f1(x + w * 0.62)}L${f1(x + w * 0.7)},${f1(y - h * 0.8)}L${f1(x + w)},${f1(y)}Z" fill="#c07a40" stroke="#5c3518" stroke-width=".8" stroke-linejoin="round"/>` +
+          `<path d="M${f1(x + w * 0.1)},${f1(y - h)}H${f1(x + w * 0.62)}L${f1(x + w * 0.7)},${f1(y - h * 0.8)}L${f1(x + w)},${f1(y)}H${f1(x + w * 0.3)}Z" fill="#7c4a22" opacity=".72"/>` +
+          `<path d="M${f1(x - w * 0.6)},${f1(y - h)}H${f1(x + w * 0.62)}" stroke="#ecc08a" stroke-width="1.3" stroke-linecap="round"/>` +
+          `<path d="M${f1(x - w * 0.66)},${f1(y - h * 0.62)}H${f1(x + w * 0.2)}M${f1(x - w * 0.8)},${f1(y - h * 0.3)}H${f1(x + w * 0.1)}" stroke="#8e5a2c" stroke-width=".45" opacity=".7"/>` +
+          `<path d="M${f1(x - w * 0.35)},${f1(y - h * 0.9)}v${f1(h * 0.5)}M${f1(x - w * 0.05)},${f1(y - h * 0.9)}v${f1(h * 0.36)}" stroke="#5c3518" stroke-width=".5" opacity=".55"/>`;
         continue;
       }
-      const h = (8 + W * 0.34) * p.size * (0.7 + q * 0.6) + (type === 'volcano' ? 5 : 0), w = h * (0.66 + q * 0.14);
-      const tx = x + (q - 0.5) * w * 0.3, ty = y - h, sl = [x - w * 0.5, y - h * 0.44], sr = [x + w * 0.52, y - h * 0.4];
+      const h = (8 + W * 0.34) * p.size * (0.7 + q * 0.6) + (type === 'volcano' ? 6 : 0), w = h * (0.66 + q * 0.14), L = [x - w, y], R = [x + w, y];
       if (type === 'volcano') {
-        const cw = w * 0.2;
-        s += `<circle cx="${f1(tx)}" cy="${f1(ty)}" r="${f1(h * 0.55)}" fill="url(#gLava)"/>` +
-          `<path d="M${f1(x - w)},${f1(y)}L${f1(sl[0])},${f1(sl[1])}L${f1(tx - cw)},${f1(ty)}L${f1(tx + cw)},${f1(ty)}L${f1(sr[0])},${f1(sr[1])}L${f1(x + w)},${f1(y)}Z" fill="${c.lit}" stroke="${ink}" stroke-width=".9" stroke-linejoin="round"/>` +
-          `<path d="M${f1(tx + cw * 0.2)},${f1(ty)}L${f1(tx + cw)},${f1(ty)}L${f1(sr[0])},${f1(sr[1])}L${f1(x + w)},${f1(y)}H${f1(x + w * 0.18)}L${f1(tx + w * 0.1)},${f1(y - h * 0.5)}Z" fill="${c.shade}"/>` +
-          `<path d="M${f1(tx - cw)},${f1(ty)}h${f1(cw * 2)}" stroke="#ff7a2a" stroke-width="2.2" stroke-linecap="round"/>` +
-          `<path d="M${f1(tx - cw * 0.3)},${f1(ty + 1)}q${f1(-3 + q * 5)},${f1(h * 0.4)} ${f1(-w * 0.32)},${f1(h * 0.86)}" stroke="#ff8a36" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+        const tx = x + (fr(1) - 0.5) * w * 0.2, ty = y - h, cw = w * 0.24, drift = fr(2) > 0.5 ? 1 : -1;
+        const leftS = `Q${f1(x - w * 0.36)},${f1(y - h * 0.3)} ${f1(tx - cw)},${f1(ty)}`, rightS = `Q${f1(x + w * 0.36)},${f1(y - h * 0.3)} ${P(R)}`;
+        s += `<circle cx="${f1(tx)}" cy="${f1(ty)}" r="${f1(h * 0.62)}" fill="url(#gLava)"/>`;
+        for (let i = 3; i >= 0; i--) s += `<circle cx="${f1(tx + drift * (1.5 + i * 2.6))}" cy="${f1(ty - 4 - i * 5.2)}" r="${f1(2.6 + i * 1.5)}" fill="#d8cfc8" opacity="${f1((0.34 - i * 0.07) * 10) / 10}"/>`;
+        s += `<path d="M${P(L)}${leftS}L${f1(tx + cw)},${f1(ty)}${rightS}Z" fill="url(#gVolLit)"/>` +
+          `<path d="M${f1(tx + cw * 0.1)},${f1(ty)}L${f1(tx + cw)},${f1(ty)}${rightS}H${f1(x + w * 0.22)}Q${f1(tx + w * 0.14)},${f1(y - h * 0.5)} ${f1(tx + cw * 0.1)},${f1(ty)}Z" fill="url(#gVolShade)"/>` +
+          `<path d="M${P(lerp(L, [tx - cw, ty], 0.25))}Q${f1(x - w * 0.4)},${f1(y - h * 0.42)} ${f1(tx - cw)},${f1(ty)}M${f1(tx + cw)},${f1(ty)}Q${f1(x + w * 0.4)},${f1(y - h * 0.42)} ${P(lerp(R, [tx + cw, ty], 0.25))}" fill="none" stroke="${ink}" stroke-width=".8" stroke-linecap="round"/>` +
+          `<ellipse cx="${f1(tx)}" cy="${f1(ty)}" rx="${f1(cw)}" ry="${f1(cw * 0.36)}" fill="#ff7a2a" stroke="#2a1a14" stroke-width=".7"/><ellipse cx="${f1(tx)}" cy="${f1(ty)}" rx="${f1(cw * 0.55)}" ry="${f1(cw * 0.18)}" fill="#ffd27a"/>` +
+          `<path d="M${f1(tx - cw * 0.5)},${f1(ty + 1)}q${f1(-2 + fr(3) * 3)},${f1(h * 0.3)} ${f1(-w * 0.2)},${f1(h * 0.46)}t${f1(-w * 0.12)},${f1(h * 0.34)}" stroke="#ff7a2a" stroke-width="1.5" fill="none" stroke-linecap="round"/>` +
+          `<path d="M${f1(tx + cw * 0.4)},${f1(ty + 1)}q${f1(1 + fr(4) * 3)},${f1(h * 0.24)} ${f1(w * 0.1)},${f1(h * 0.42)}" stroke="#ff9a46" stroke-width="1.1" fill="none" stroke-linecap="round"/>`;
         continue;
       }
-      s += `<path d="M${f1(x - w)},${f1(y)}L${f1(sl[0])},${f1(sl[1])}L${f1(tx)},${f1(ty)}L${f1(sr[0])},${f1(sr[1])}L${f1(x + w)},${f1(y)}Z" fill="${c.lit}" stroke="${ink}" stroke-width=".85" stroke-linejoin="round"/>` +
-        `<path d="M${f1(tx)},${f1(ty)}L${f1(sr[0])},${f1(sr[1])}L${f1(x + w)},${f1(y)}H${f1(x + w * 0.16)}L${f1(tx + w * 0.1)},${f1(y - h * 0.48)}Z" fill="${c.shade}"/>`;
+      // A mountain: a broken ridge line, a sunlit face and a shaded one split by a zigzag spur, a few strokes
+      // of hatching in the shade, and snow on the tall ones.
+      const T = [x + (fr(1) - 0.5) * w * 0.34, y - h], ls = [x - w * (0.5 + fr(2) * 0.12), y - h * (0.38 + fr(3) * 0.14)];
+      const n1 = [T[0] + w * (0.2 + fr(4) * 0.1), T[1] + h * (0.2 + fr(5) * 0.1)], n2 = [n1[0] + w * 0.1, n1[1] - h * 0.07], rs = [x + w * (0.56 + fr(6) * 0.1), y - h * (0.34 + fr(7) * 0.12)];
+      const s1 = [T[0] - w * 0.08, T[1] + h * 0.32], s2 = [T[0] + w * 0.1, T[1] + h * 0.58], s3 = [T[0] - w * 0.02, y];
+      s += `<path d="M${P(L)}L${P(ls)}L${P(T)}L${P(n1)}L${P(n2)}L${P(rs)}L${P(R)}Z" fill="url(#g${c.id}Lit)"/>` +
+        `<path d="M${P(T)}L${P(n1)}L${P(n2)}L${P(rs)}L${P(R)}L${P(s3)}L${P(s2)}L${P(s1)}Z" fill="url(#g${c.id}Shade)"/>`;
+      let hatch = '';
+      for (let i = 0; i < 3; i++) { const a = lerp(lerp(s1, s2, 0.3 + i * 0.3), lerp(n2, rs, 0.25 + i * 0.3), 0.45); hatch += `M${P(a)}l${f1(w * 0.13)},${f1(h * 0.17)}`; }
+      s += `<path d="${hatch}" stroke="${ink}" stroke-width=".45" opacity=".4" stroke-linecap="round"/>`;
       if (type === 'snow' || h > 21) {
-        const a = h * 0.3;
-        s += `<path d="M${f1(tx)},${f1(ty)}L${f1(tx - w * 0.25)},${f1(ty + a)}L${f1(tx - w * 0.09)},${f1(ty + a * 0.74)}L${f1(tx + w * 0.03)},${f1(ty + a * 1.08)}L${f1(tx + w * 0.15)},${f1(ty + a * 0.7)}L${f1(tx + w * 0.26)},${f1(ty + a)}Z" fill="#fbfdff" stroke="${ink}" stroke-width=".3" stroke-linejoin="round"/>`;
+        s += `<path d="M${P(T)}L${P(lerp(T, ls, 0.5))}L${f1(T[0] - w * 0.2)},${f1(T[1] + h * 0.36)}L${f1(T[0] - w * 0.12)},${f1(T[1] + h * 0.25)}L${P(s1)}Z" fill="#fdfeff"/>` +
+          `<path d="M${P(T)}L${P(n1)}L${P(n2)}L${P(lerp(n2, rs, 0.35))}L${f1(T[0] + w * 0.24)},${f1(T[1] + h * 0.42)}L${f1(T[0] + w * 0.1)},${f1(T[1] + h * 0.3)}L${P(s1)}Z" fill="#c6d4dd"/>`;
       }
-      s += `<path d="M${f1(tx)},${f1(ty)}L${f1(tx - w * 0.1)},${f1(y - h * 0.62)}L${f1(tx + w * 0.07)},${f1(y - h * 0.4)}L${f1(tx - w * 0.04)},${f1(y - h * 0.16)}" fill="none" stroke="${ink}" stroke-width=".5" opacity=".55" stroke-linejoin="round"/>`;
+      s += `<path d="M${P(lerp(L, ls, 0.3))}L${P(ls)}L${P(T)}L${P(n1)}L${P(n2)}L${P(rs)}L${P(lerp(R, rs, 0.3))}" fill="none" stroke="${ink}" stroke-width=".85" stroke-linejoin="round" stroke-linecap="round"/>` +
+        `<path d="M${P(T)}L${P(s1)}L${P(s2)}L${P(lerp(s2, s3, 0.5))}" fill="none" stroke="${ink}" stroke-width=".5" opacity=".6" stroke-linejoin="round" stroke-linecap="round"/>`;
     }
     return s;
+  }
+
+  // A small ship lying off each port, in open water facing away from the land.
+  function ships(map) {
+    const out = [];
+    for (const st of map.settlements) {
+      if (st.type !== 'port') continue;
+      const r = PM.rng(PM.hash(st.id)), start = r() * 6.28, dist = 20 + r() * 8;
+      for (let i = 0; i < 16; i++) {
+        const a = start + i * Math.PI / 8, x = st.x + Math.cos(a) * dist, y = st.y + Math.sin(a) * dist;
+        if (x < 12 || y < 12 || x > map.meta.width - 12 || y > map.meta.height - 12 || PM.onLand(map, x, y) || PM.shoreDistance(map, x, y) < 9) continue;
+        out.push([f1(x), f1(y), Math.cos(a) < 0]);
+        break;
+      }
+    }
+    return out;
   }
 
   // A river's outline: narrow at its source (first point), widening to its mouth.
@@ -273,6 +339,7 @@
     .lod0 .pin.minor .ico,.lod0 .pin.minor .nm,.lod0 .minor-road,.lod0 .small-label{display:none}
     .lod0 .pin.minor .dot{display:inline}
     .lod1 .pin.minor .nm{display:none}
+    .lod0 .copse{display:none}
     .realm{transition:opacity .25s}
     .lod3 .realm{opacity:.25}
     text{user-select:none;-webkit-user-select:none}`;
@@ -285,14 +352,27 @@
     <g id="sPort"><circle r="6.4" cy="-1" fill="${PAL.paper}" stroke="${PAL.ink}" stroke-width="1"/><g stroke="${PAL.ink}" stroke-width="1.35" fill="none" stroke-linecap="round"><circle cy="-4.3" r="1.25"/><path d="M0-3v6.4M-2.4-1.4h4.8M-3.9 0.6q.4 2.9 3.9 2.9t3.9-2.9"/></g></g>
     <g id="sFort"><path d="M-4 3.2v-8.4h1.7v1.5h1.4v-1.5h1.8v1.5h1.4v-1.5h1.7v8.4z" ${body}/></g>
     <g id="sRuin"><path d="M-4.6 3.2v-5.4l1.2-.9 1.2 1.6v4.7zM.8 3.2v-7.6l1.6-.8.9 1.9.9-.6v7.1z" ${body}/></g>
-    <g id="tDec"><ellipse cx="1" cy=".6" rx="4.2" ry="1.6" fill="#2c3410" opacity=".35"/><circle cx=".7" cy="-3.3" r="4.2" fill="#48531c"/><circle cy="-4" r="4" fill="#7d8c2c"/><circle cx="-1.4" cy="-5.4" r="1.9" fill="#a3b047"/></g>
-    <g id="tCon"><ellipse cx="1" cy=".5" rx="3.6" ry="1.3" fill="#16210f" opacity=".4"/><path d="M0-10.5l4 6.4h-2l3 4.1h-10l3-4.1h-2z" fill="#2f4a2e" stroke="#1d2e1c" stroke-width=".5" stroke-linejoin="round"/><path d="M0-10.5l-4 6.4h2l-3 4.1h3.6l1-4.1h-.9z" fill="#5d7b4d"/></g>`;
+    <g id="tDec"><ellipse cx="1" cy=".6" rx="4.2" ry="1.5" fill="#2c3410" opacity=".35"/><path d="M-.5 .4v-2.4h1.1v2.4z" fill="#4a3620"/><circle cx=".7" cy="-3.9" r="4.2" fill="#48531c"/><circle cy="-4.6" r="4" fill="#7d8c2c"/><circle cx="-1.4" cy="-6" r="1.9" fill="#a3b047"/></g>
+    <g id="tDec2"><ellipse cx="1.5" cy=".6" rx="5.4" ry="1.6" fill="#2c3410" opacity=".35"/><path d="M-.5 .4v-2.2h1.1v2.2z" fill="#4a3620"/><circle cx="2.6" cy="-3.2" r="3.4" fill="#465218"/><circle cx="-1.4" cy="-4.4" r="4" fill="#5d6c22"/><circle cx="2.2" cy="-3.9" r="3.1" fill="#748428"/><circle cx="-1.9" cy="-5.2" r="3.4" fill="#8a9a34"/><circle cx="-2.9" cy="-6.4" r="1.6" fill="#aab850"/></g>
+    <g id="tDec3"><ellipse cx="1" cy=".6" rx="3.4" ry="1.3" fill="#2c3410" opacity=".35"/><path d="M-.45 .4v-3h.9v3z" fill="#4a3620"/><ellipse cx=".6" cy="-5.6" rx="3.3" ry="4.9" fill="#4f5c1f"/><ellipse cy="-6.2" rx="3.1" ry="4.7" fill="#8b9a3a"/><ellipse cx="-1" cy="-8" rx="1.4" ry="2.2" fill="#b0bd58"/></g>
+    <g id="tJun"><ellipse cx="1" cy=".6" rx="5" ry="1.6" fill="#10200f" opacity=".4"/><path d="M-.5 .4v-3.4h1v3.4z" fill="#3a2a18"/><ellipse cx=".8" cy="-4.8" rx="5.4" ry="3.3" fill="#234a22"/><ellipse cy="-5.5" rx="5.1" ry="3" fill="#3d7434"/><ellipse cx="-1.6" cy="-6.6" rx="2.4" ry="1.2" fill="#62994a"/></g>
+    <g id="tCon"><ellipse cx="1" cy=".5" rx="3.6" ry="1.3" fill="#16210f" opacity=".4"/><path d="M0-10.5l4 6.4h-2l3 4.1h-10l3-4.1h-2z" fill="#2f4a2e" stroke="#1d2e1c" stroke-width=".5" stroke-linejoin="round"/><path d="M0-10.5l-4 6.4h2l-3 4.1h3.6l1-4.1h-.9z" fill="#5d7b4d"/></g>
+    <g id="tCon2"><ellipse cx="1" cy=".5" rx="3.2" ry="1.2" fill="#16210f" opacity=".4"/><path d="M0-14l3.2 5h-1.6l2.9 4.4h-1.5l3 4.6h-12l3-4.6h-1.5l2.9-4.4h-1.6z" fill="#27412a" stroke="#18281a" stroke-width=".5" stroke-linejoin="round"/><path d="M0-14l-3.2 5h1.6l-2.9 4.4h1.5l-3 4.6h4.2l.9-4.6h-.8l.9-4.4h-.7z" fill="#4f6f47"/></g>
+    <g id="sShip"><path d="M-7 5.4q2.5-1.6 5 0t5 0 5 0" fill="none" stroke="#cfe8e6" stroke-width=".8" opacity=".7" stroke-linecap="round"/><path d="M-5.2 1.2h10.6l-1.9 3.3h-7z" fill="#4a3320" stroke="${PAL.ink}" stroke-width=".6" stroke-linejoin="round"/><path d="M.2 1v-9.6" stroke="${PAL.ink}" stroke-width=".7"/><path d="M.8-8.2q4.6 3.4 3.8 8.2h-3.8z" fill="${PAL.paper}" stroke="${PAL.ink}" stroke-width=".5" stroke-linejoin="round"/><path d="M-.5-6.6q-3.6 2.6-3.4 6.6h3.4z" fill="#e2d6b4" stroke="${PAL.ink}" stroke-width=".5" stroke-linejoin="round"/><path d="M.2-8.6l2.6.9-2.6.9z" fill="#8f2c22"/></g>`;
   })();
   function defs(ctx) {
     const t = textures();
     return `<style>${ctx.flat ? 'text{}' : STYLE}</style>
     <radialGradient id="gSea" cx="50%" cy="48%" r="72%"><stop offset="0" stop-color="${PAL.seaIn}"/><stop offset=".65" stop-color="${PAL.seaMid}"/><stop offset="1" stop-color="${PAL.seaOut}"/></radialGradient>
     <radialGradient id="gScar" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#40204f"/><stop offset=".45" stop-color="#1b1220"/><stop offset="1" stop-color="#0e0a10"/></radialGradient>
+    <linearGradient id="gMtnLit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.mountain.lit}"/><stop offset=".58" stop-color="${PAL.peak.mountain.lit}"/><stop offset="1" stop-color="${PAL.peak.mountain.lit}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gMtnShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.mountain.shade}"/><stop offset=".58" stop-color="${PAL.peak.mountain.shade}"/><stop offset="1" stop-color="${PAL.peak.mountain.shade}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gSnowLit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.snow.lit}"/><stop offset=".58" stop-color="${PAL.peak.snow.lit}"/><stop offset="1" stop-color="${PAL.peak.snow.lit}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gSnowShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.snow.shade}"/><stop offset=".58" stop-color="${PAL.peak.snow.shade}"/><stop offset="1" stop-color="${PAL.peak.snow.shade}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gVolLit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.volcano.lit}"/><stop offset=".58" stop-color="${PAL.peak.volcano.lit}"/><stop offset="1" stop-color="${PAL.peak.volcano.lit}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gVolShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.volcano.shade}"/><stop offset=".58" stop-color="${PAL.peak.volcano.shade}"/><stop offset="1" stop-color="${PAL.peak.volcano.shade}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gHillLit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.hills.lit}"/><stop offset=".58" stop-color="${PAL.peak.hills.lit}"/><stop offset="1" stop-color="${PAL.peak.hills.lit}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gHillShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PAL.peak.hills.shade}"/><stop offset=".58" stop-color="${PAL.peak.hills.shade}"/><stop offset="1" stop-color="${PAL.peak.hills.shade}" stop-opacity="0"/></linearGradient>
     <radialGradient id="gLava"><stop offset="0" stop-color="#ff6a1f" stop-opacity=".55"/><stop offset="1" stop-color="#ff6a1f" stop-opacity="0"/></radialGradient>
     ${SYMBOLS}
     <image id="texSea" href="${t.sea}" width="1" height="1" preserveAspectRatio="none"/>`;
@@ -325,16 +405,22 @@
       if (!ctx.vis.rivers) return '';
       let s = '';
       for (const rv of map.rivers) s += `<path d="${cached('v' + JSON.stringify(rv), () => riverShape(rv))}" fill="${PAL.water}" stroke="${PAL.waterEdge}" stroke-width=".6" stroke-linejoin="round"/>`;
+      // A light thread down the middle of each river, so it reads as running water.
+      for (const rv of map.rivers) s += `<path d="${smoothPath(rv.pts, false)}" fill="none" stroke="${PAL.waterLight}" stroke-width="${f1(Math.min(rv.width[0], rv.width[1]) * 0.3)}" opacity=".55" stroke-linecap="round"/>`;
       for (const lk of map.lakes) {
         const d = smoothPath(lk.pts, true, 0.5);
         s += `<path d="${d}" fill="${PAL.water}" stroke="${PAL.waterLight}" stroke-width="4.5" stroke-opacity=".35"/><path d="${d}" fill="${PAL.water}" stroke="${PAL.waterEdge}" stroke-width=".9"/>`;
       }
       return s;
     } },
-    { id: 'trees', needs: ['biomes', 'coast'], toggles: ['trees'], draw(map, ctx) {
+    // Everything that grows or rolls on the land: woods, hills, and copses on open country.
+    { id: 'trees', needs: ['biomes', 'coast', 'lakes', 'ranges'], toggles: ['trees'], draw(map, ctx) {
       if (!ctx.vis.trees) return '';
-      const coast = JSON.stringify(map.coast);
-      return map.biomes.filter(b => b.type === 'forest' || b.type === 'darkforest' || b.type === 'jungle').map(b => cached('t' + JSON.stringify(b) + PM.hash(coast), () => trees(map, b))).join('');
+      const coast = PM.hash(JSON.stringify(map.coast));
+      const woods = b => b.type === 'forest' || b.type === 'darkforest' || b.type === 'jungle';
+      return `<g class="copse">${cached('k' + coast + JSON.stringify([map.biomes, map.lakes, map.ranges]), () => copses(map))}</g>` +
+        map.biomes.filter(b => b.type === 'hills').map(b => cached('h' + JSON.stringify(b) + coast, () => hills(map, b))).join('') +
+        map.biomes.filter(woods).map(b => cached('t' + JSON.stringify(b) + coast, () => trees(map, b))).join('');
     } },
     { id: 'roads', needs: ['roads', 'settlements'], toggles: ['roads'], draw(map, ctx) {
       if (!ctx.vis.roads) return '';
@@ -351,7 +437,8 @@
     { id: 'ranges', needs: ['ranges'], toggles: ['ranges'], draw: (map, ctx) => (ctx.vis.ranges ? map.ranges.map(g => cached('r' + JSON.stringify(g), () => peaks(g))).join('') : '') },
     { id: 'borders', needs: ['borders'], toggles: ['borders'], draw(map, ctx) {
       if (!ctx.vis.borders) return '';
-      let s = `<g fill="none" stroke-linecap="round" stroke-linejoin="round">`;
+      // Drawn on land only: where a border reaches the coast, the sea finishes the outline.
+      let s = `<g fill="none" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#landClip)">`;
       for (const b of map.borders) {
         const d = smoothPath(b.pts, !!b.closed);
         s += `<path d="${d}" stroke="${PAL.borderBand}" opacity=".16" ${sw(ctx, 9)}/><path d="${d}" stroke="${PAL.paper}" opacity=".5" ${sw(ctx, 3)}/>` +
@@ -391,6 +478,10 @@
       }
       return s;
     } },
+    { id: 'ships', needs: ['settlements', 'coast', 'meta'], toggles: ['deco', 'settlements'], draw(map, ctx) {
+      if (!ctx.vis.deco || !ctx.vis.settlements) return '';
+      return cached('s' + PM.hash(JSON.stringify([map.coast, map.settlements])), () => ships(map)).map(([x, y, flip]) => `<g ${at(ctx, x, y)}><use href="#sShip"${flip ? ' transform="scale(-1 1)"' : ''}/></g>`).join('');
+    } },
     { id: 'frame', needs: ['meta'], toggles: ['deco'], draw(map, ctx) {
       const W = map.meta.width, H = map.meta.height, gold = '#d8c79a', dim = '#6e5b3a', line = '#4a3d28';
       let ticks = '';
@@ -421,7 +512,7 @@
   ];
   // The switches in the Layers panel.
   const TOGGLES = [['biomes', 'Terrain areas'], ['trees', 'Trees'], ['ranges', 'Mountains'], ['rivers', 'Rivers and lakes'], ['borders', 'Borders'], ['roads', 'Roads'],
-    ['settlements', 'Settlements'], ['labels', 'Names and labels'], ['deco', 'Compass'], ['grid', 'Grid (every 50 units)']];
+    ['settlements', 'Settlements'], ['labels', 'Names and labels'], ['deco', 'Compass and ships'], ['grid', 'Grid (every 50 units)']];
   const defaultVis = () => Object.fromEntries(TOGGLES.map(([k]) => [k, k !== 'grid']));
 
   const layer = (L, map, ctx) => L.draw(map, ctx);

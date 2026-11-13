@@ -524,7 +524,7 @@ ${table(['Key', 'Each item', 'Rules'], [
     ['`ranges`', '`id`, `name`, `type`, `width`, optional `closed`, `pts`', `A ridge line; peaks are generated along it. Types: ${list(PM.TYPES.ranges)}. \`width\` is the band's width in map units.`],
     ['`rivers`', '`id`, `name`, `width` `[atSource, atMouth]`, `pts`', '**Points run from source to mouth.** The drawn width tapers between the two values. The last point must reach the sea, a lake, or another river.'],
     ['`lakes`', '`id`, `name`, `pts` (closed)', ''],
-    ['`borders`', '`id`, optional `closed`, `pts`', 'Drawn as dotted lines. Not yet tied to named realms.'],
+    ['`borders`', '`id`, optional `closed`, `pts`', 'Drawn on land as a dash-and-dot boundary line. A border either is `closed` (a loop round a territory) or runs until **each end reaches the sea or another border**, so every territory is fully outlined by borders and coast. Not yet tied to named realms.'],
     ['`settlements`', '`id`, `name`, `type`, `x`, `y`', `Types: ${list(PM.TYPES.settlements)}. Must be on land. Unnamed until the owner names them.`],
     ['`roads`', '`id`, `from`, `to` (settlement ids), `major`, optional `via` (points)', 'Settlement-to-settlement links; `via` points bend the road (through a pass, around a lake). Renaming a settlement\'s id updates its roads, and deleting a settlement deletes its roads.'],
     ['`labels`', '`id`, `text`, `x`, `y`, `rot` (degrees), `size`, `kind`', `Kinds: ${list(PM.TYPES.labels)} (\`realm\`: large capitals; \`feature\`: italic; \`sea\`).`]])}
@@ -548,13 +548,14 @@ Labels: ${WORLD.labels.map(l => `${l.text} (\`${l.id}\`, ${l.kind})`).join(', ')
 - closed shapes have 3 or more points and lines have 2 or more
 - every settlement is on land (within ${PM.NEAR} map units of a shore counts)
 - every river's last point reaches the sea, a lake, or another river (within ${PM.NEAR} map units)
+- every border is a closed loop, or each of its ends reaches the sea or another border (within ${PM.NEAR} map units)
 - \`map-data.js\` holds exactly the map in \`primordium-map.json\`
 
 The current map ${problems.length ? 'has these problems: ' + problems.map(p => p.text).join(' ') : 'passes all of them'}.
 
 ## The map app (\`map/\`), as built
 
-- **Drawing:** generated from the data. The land is painted: terrain areas blend into each other along soft, ragged edges (their outlines only need to be roughly right), with texture, rocky ground under mountain ranges, pale strands along shores, and small marks (dunes, tufts, reeds, cracks). Over it: roughened coasts with shallow-water bands, seeded trees that thin toward the edge of a wood, peaks, tapered rivers, roads, border lines (dash and dot, with a soft band), settlement icons, lettering, a compass and a frame.
+- **Drawing:** generated from the data. The land is painted: terrain areas blend into each other along soft, ragged edges (their outlines only need to be roughly right), with texture, rocky ground under mountain ranges, pale strands along shores, and small marks (dunes, tufts, reeds, cracks). Settlements on farmable ground get tilled fields round them. Over it: roughened coasts with shallow-water bands; woods of several tree shapes that thin toward their edges; rolling hills over \`hills\` areas; lone trees and copses on open country; mountains, snow peaks, smoking volcanoes and buttes; a ship off each port; tapered rivers, roads, border lines (dash and dot, with a soft band), settlement icons, lettering, a compass and a frame.
 - **Detail with zoom:** small towns, minor roads and small labels appear as you zoom in, the ground gains finer texture and marks, and realm names fade when close.
 - **Looking:** the map fills the window and opens read-only. Search by name, id, type or notes; point at a feature for its name; click it for a card with its notes; measure distances; copy a link that opens the same spot and zoom. It also works on a phone.
 - **Editing** (the Edit switch): click to select (again for what is beneath), drag handles to reshape, halfway handles add points, drag settlements and labels, draw new features of every kind, bend roads with \`via\` points, reorder terrain areas, undo and redo, a details form for every field including notes, a list of every feature, layer switches, and a Checks tab that lists problems and jumps to them.

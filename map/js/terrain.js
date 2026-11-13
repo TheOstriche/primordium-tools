@@ -8,7 +8,7 @@
 //   3. Each terrain area, in order, is drawn as a soft-edged shape. Where the softness plus the edge wobble
 //      passes halfway, the area's own tones replace what is underneath, so areas interlock along a ragged
 //      edge and fade into each other instead of stopping at a hard line. Mountain ranges put rocky ground
-//      under their peaks the same way, and shores get a pale strand.
+//      under their peaks the same way, shores get a pale strand, and settlements get tilled fields round them.
 //   4. Small marks (dune crests, tufts, reeds, cracks, stones…) are scattered where each terrain is, at fixed
 //      spots on the map. Finer marks join in as you zoom in.
 // Finer noise and marks are only drawn when the picture is detailed enough to show them, which is what makes
@@ -19,6 +19,7 @@
 (function () {
   'use strict';
   const PM = window.PrimordiumMap, D = window.MapDraw;
+  const FIELDS = 250;                    // the mark id of tilled fields in `top` (terrain areas use 1 upward)
   const BASE_PX_PER_UNIT = 1.2;          // sharpness of the whole-map picture
   const rgb = hex => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
   const styles = (() => {
@@ -152,7 +153,17 @@
     }
     if (opts.areas !== false) for (let i = 0; i < map.biomes.length; i++) {
       const b = map.biomes[i], st = styles[b.type] || styles.unknown;
-      zone({ style: st, id: i + 1, feather: st.feather || 13, paint() { mg.fillStyle = '#000'; trace(b.pts, true); mg.fill(); } }, PM.bbox(b.pts));
+      zone({ style: st, id: Math.min(i + 1, 249), feather: st.feather || 13, paint() { mg.fillStyle = '#000'; trace(b.pts, true); mg.fill(); } }, PM.bbox(b.pts));
+      if (!(await wanted())) return null;
+    }
+    // Tilled fields round every settlement that stands on farmable ground: larger round a capital than a town.
+    if (opts.areas !== false) {
+      const reach = { capital: 30, city: 24, town: 14, port: 10 }, farmable = { 'plains-dry': 1, grass: 1, hills: 1, scrub: 1, savanna: 1, farmland: 1 };
+      for (const st of map.settlements) {
+        const R = reach[st.type], under = PM.biomeAt(map, st.x, st.y);
+        if (!R || (under && !farmable[under.type])) continue;
+        zone({ style: styles.fields, id: FIELDS, feather: R * 0.35, strength: 0.8, paint() { const c = toPx([st.x, st.y]); mg.fillStyle = '#000'; mg.beginPath(); mg.arc(c[0], c[1], R / upp, 0, 6.3); mg.fill(); } }, [st.x - R, st.y - R, st.x + R, st.y + R]);
+      }
       if (!(await wanted())) return null;
     }
     // Rocky ground under the peaks, so ranges rise out of the land instead of sitting on top of it.
@@ -174,7 +185,7 @@
       g.translate(-x0, -y0);
       g.lineCap = g.lineJoin = 'round';
       const thin = Math.max(0.45, upp * 0.85), tiers = upp < 0.4 ? [0, 1] : [0];
-      const kinds = [[0, styles.base]].concat(opts.areas !== false ? map.biomes.map((b, i) => [i + 1, styles[b.type] || styles.unknown]) : []);
+      const kinds = [[0, styles.base], [FIELDS, styles.fields]].concat(opts.areas !== false ? map.biomes.map((b, i) => [Math.min(i + 1, 249), styles[b.type] || styles.unknown]) : []);
       // Group zones by mark so each kind of mark walks the grid once.
       const byMark = new Map();
       for (const [id, st] of kinds) if (st.mark) { const key = st.mark + '|' + st.ink + '|' + (st.gap || 16); if (!byMark.has(key)) byMark.set(key, { st, ids: new Set() }); byMark.get(key).ids.add(id); }

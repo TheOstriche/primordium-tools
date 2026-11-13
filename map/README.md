@@ -28,10 +28,12 @@ Press **Edit** (top right). It turns to **Editing**, and Add, Undo, Redo, and Sa
 - **Ctrl+drag** a selected shape to move all of it. Drag a selected settlement or label to move it; the arrow keys nudge it.
 - **Add** draws something new: click the points, then press **Enter** (or double-click) to finish. **Esc** cancels.
 - A road joins two settlements. Select it and drag its halfway handle to bend it, for example through a mountain pass.
+- **Borders** follow one rule: a border is a closed loop, or it runs until each end reaches the sea or another border. Drag an end onto the coast or onto another border; the Checks tab tells you if one is left loose.
+- **Hills:** add a terrain area of type **hills** wherever the country should roll. Woods, hills, fields round towns, lone trees, and ships off ports all draw themselves.
 - **Terrain areas** blend into whatever is next to them, so their outlines only need to be roughly right. Later areas in the list paint over earlier ones (**Bring forward** / **Send back**). Types you can choose include hills, scrub, savanna, farmland, marsh, jungle, badlands, and snow as well as the ones the map uses now.
 - **More → Map details and scale** sets the map's name, version, and **scale**.
 - **Ctrl+Z** undoes, **Ctrl+Y** redoes, **Delete** removes the selection.
-- The **Checks** tab (in Browse) lists problems (a settlement in the sea, a river that ends on dry land, a road to nowhere). Click one to go to it.
+- The **Checks** tab (in Browse) lists problems (a settlement in the sea, a river that ends on dry land, a road to nowhere, a border with a loose end). Click one to go to it.
 
 ## Saving
 

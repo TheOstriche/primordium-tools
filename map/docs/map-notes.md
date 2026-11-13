@@ -17,6 +17,8 @@ Decisions about what the world *is* (lore, names, what explains each strange lan
 - **Approximate:** borders, which follow the original's dotted lines only roughly, and roads, which were rebuilt between nearby settlements because the original's road web wasn't traced.
 - **Placeholder:** scale.
 - **Corrected when the map was brought into the repository (2026-11-12):** two features broke the map's own rules and were moved the shortest distance that fixes them. Port `port-11` sat 12 map units out to sea and was moved onto the nearest shore (1372, 935 to 1360.4, 941.3). River `drune-south` stopped 20 units short of the coast and was given one more point at the nearest shore (439.9, 868.2). Nothing else was changed.
+- **Borders made consistent (2026-11-12, the owner's request):** a border now either closes on itself or runs until each end reaches the sea or another border, so every territory is fully outlined by borders and coast. To get there: a new closed border, `scar-line`, runs just outside the Scar (four borders used to stop dead at its edge, leaving it unclaimed and unoutlined), and ten loose ends were moved the short distance (1 to 17 map units) to the border or shore they were heading for. The Scar, the Obsidian Coast and the Cracked Mesa are not divided from each other by any border.
+- **Hills added (2026-11-12):** the owner said Trinimar and Aurau Imperian have hills now and then. Seven small `hills` areas were placed to show it: `hills-trinimar-1` to `-4` and `hills-aurau-1` to `-3`. Their exact places and shapes are a first guess and are easy to move.
 
 ## Names the data uses (from the owner's map; keep them spelled exactly)
 

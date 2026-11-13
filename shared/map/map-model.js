@@ -164,6 +164,16 @@
     for (const s of map.settlements) {
       if (!onLand(map, s.x, s.y) && shoreDistance(map, s.x, s.y) > NEAR) add('error', 'settlements', s.id, `Settlement "${title('settlements', s)}" is in the sea.`);
     }
+    // Borders work one way: a border either closes on itself, or each of its ends reaches the sea or another
+    // border. Then every territory is fully outlined by borders and coast, and none trails off in open country.
+    for (const b of map.borders) {
+      if (b.closed || b.pts.length < 2) continue;
+      for (const [x, y] of [b.pts[0], b.pts[b.pts.length - 1]]) {
+        const meets = !onLand(map, x, y) || shoreDistance(map, x, y) <= NEAR ||
+          map.borders.some(o => o !== b && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, !!o.closed, 4), !!o.closed).d <= NEAR);
+        if (!meets) add('error', 'borders', b.id, `Border "${b.id}" has a loose end at ${Math.round(x)}, ${Math.round(y)}: each end should reach the sea or another border (or the border should be a closed loop).`);
+      }
+    }
     for (const rv of map.rivers) {
       if (rv.pts.length < 2) continue;
       const [x, y] = rv.pts[rv.pts.length - 1];

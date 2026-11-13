@@ -20,10 +20,11 @@
       if (L.id === 'land') T.attach();          // its two pictures are new elements: fill them again
     }
   }
-  // The painted land depends on the terrain areas, the ranges (rocky ground), and the coast (strands).
+  // The painted land depends on the terrain areas, the ranges (rocky ground), the coast (strands), and where
+  // the settlements are (their fields).
   const terrainOpts = () => ({ areas: vis.biomes, ranges: vis.ranges });
   function terrain(live) {
-    const map = S.map, k = JSON.stringify([map.biomes, map.ranges, map.coast, map.meta.width, map.meta.height, vis.biomes, vis.ranges]);
+    const map = S.map, k = JSON.stringify([map.biomes, map.ranges, map.coast, map.settlements.map(t => [t.x, t.y, t.type]), map.meta.width, map.meta.height, vis.biomes, vis.ranges]);
     if (k === terrainKey && !live) return;
     if (!live) { terrainKey = k; T.refresh(false); return; }
     if (k === terrainKey || roughBusy) return;   // while dragging: a rough picture, one at a time
