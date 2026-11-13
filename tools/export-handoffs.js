@@ -525,8 +525,9 @@ ${table(['Key', 'Each item', 'Rules'], [
     ['`rivers`', '`id`, `name`, `width` `[atSource, atMouth]`, `pts`', '**Points run from source to mouth.** The drawn width tapers between the two values. The last point must reach the sea, a lake, or another river.'],
     ['`lakes`', '`id`, `name`, `pts` (closed)', ''],
     ['`borders`', '`id`, optional `closed`, `pts`', 'Drawn on land as a dash-and-dot boundary line. A border either is `closed` (a loop round a territory) or runs until **each end reaches the sea or another border**, so every territory is fully outlined by borders and coast. Not yet tied to named realms.'],
-    ['`settlements`', '`id`, `name`, `type`, `x`, `y`', `Types: ${list(PM.TYPES.settlements)}. Must be on land. Unnamed until the owner names them.`],
+    ['`settlements`', '`id`, `name`, `type`, `x`, `y`', `Types: ${list(PM.TYPES.settlements)}. Must be on land. Unnamed until the owner names them. Villages show only when zoomed in.`],
     ['`roads`', '`id`, `from`, `to` (settlement ids), `major`, optional `via` (points)', 'Settlement-to-settlement links; `via` points bend the road (through a pass, around a lake). Renaming a settlement\'s id updates its roads, and deleting a settlement deletes its roads.'],
+    ['`paths`', '`id`, `name`, `pts`', 'Side tracks and trails, drawn as fine dotted lines when zoomed in. A free line: one end must start on a road, a settlement, or another path; the other may end anywhere (a pass, a cove, a village).'],
     ['`labels`', '`id`, `text`, `x`, `y`, `rot` (degrees), `size`, `kind`', `Kinds: ${list(PM.TYPES.labels)} (\`realm\`: large capitals; \`feature\`: italic; \`sea\`).`]])}
 
 Fields the code does not know are kept when they are plain text, numbers or true/false, so new fields can be added to items without losing them.
@@ -548,6 +549,7 @@ Labels: ${WORLD.labels.map(l => `${l.text} (\`${l.id}\`, ${l.kind})`).join(', ')
 - closed shapes have 3 or more points and lines have 2 or more
 - every settlement is on land (within ${PM.NEAR} map units of a shore counts)
 - every river's last point reaches the sea, a lake, or another river (within ${PM.NEAR} map units)
+- every path starts on a road, a settlement, or another path, and stays on land
 - every border is a closed loop, or each of its ends reaches the sea or another border (within ${PM.NEAR} map units)
 - \`map-data.js\` holds exactly the map in \`primordium-map.json\`
 
@@ -569,7 +571,7 @@ Not built yet (from the suggested plan): travel times, regional and local maps l
 Send only what is new or changed, as JSON in this shape. The owner pastes it into the map app (More, "Apply changes from the Claude project"), or Claude Code applies it. Each item under \`set\` is a **whole** feature and replaces the one with the same \`id\` (or is added if the id is new).
 
 ${code(json({ primordiumMapChanges: 1,
-    set: { settlements: [{ id: 'town-12', name: '…', type: 'town', x: 512, y: 430 }], rivers: [{ id: 'well-drune', name: '', width: [2, 5], pts: [[770, 520], [700, 560], [620, 640]] }] },
+    set: { settlements: [{ id: 'town-12', name: '…', type: 'town', x: 512, y: 430 }], rivers: [{ id: 'drune-run', name: '', width: [2, 5], pts: [[770, 520], [700, 560], [620, 640]] }] },
     remove: { roads: ['road-17'] },
     order: { biomes: ['plains-west', 'drune-sands', '…every biome id, in drawing order'] },
     meta: { version: 'map-0.2' } }))}

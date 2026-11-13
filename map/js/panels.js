@@ -33,7 +33,7 @@
   function search(text, limit) {
     const q = text.trim().toLowerCase(), out = [];
     if (!q) return out;
-    for (const kind of ['settlements', 'labels', 'biomes', 'ranges', 'rivers', 'lakes', 'coast', 'borders', 'roads']) for (const f of S.map[kind]) {
+    for (const kind of ['settlements', 'labels', 'biomes', 'ranges', 'rivers', 'lakes', 'coast', 'borders', 'roads', 'paths']) for (const f of S.map[kind]) {
       const title = rowText(kind, f), tag = rowTag(kind, f), t = title.toLowerCase();
       const rank = t.startsWith(q) ? 0 : t.includes(q) ? 1 : [f.id, tag, f.notes || ''].some(v => String(v).toLowerCase().includes(q)) ? 2 : -1;
       if (rank >= 0) out.push({ kind, id: f.id, title, tag: tag || PM.KINDS[kind].one.toLowerCase(), rank });
@@ -49,7 +49,7 @@
       window.MapDraw.TOGGLES.map(([key, label]) => h('label.check', h('input', { type: 'checkbox', checked: vis[key], onchange: e => { vis[key] = e.target.checked; onVis(); } }), label)),
       h('hr'),
       h('label.check', h('input', { type: 'checkbox', checked: prefs.simplify !== false, onchange: e => { S.setPrefs({ simplify: e.target.checked }); V.setSimplify(e.target.checked); } }),
-        'Hide small towns, minor roads, and small labels until zoomed in')
+        'Hide small towns, villages, minor roads, paths, and small labels until zoomed in')
     ];
   }
 

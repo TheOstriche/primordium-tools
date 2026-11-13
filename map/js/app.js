@@ -275,7 +275,7 @@
 
     // Tools
     $('btn-edit').onclick = () => setEditing(!E.editing);
-    menu($('btn-add'), () => ['settlements', 'labels', 'roads', 'rivers', 'lakes', 'ranges', 'biomes', 'borders', 'coast'].map(k => [k === 'coast' ? 'Island (coastline)' : PM.KINDS[k].one, () => E.add(k)]));
+    menu($('btn-add'), () => ['settlements', 'labels', 'roads', 'paths', 'rivers', 'lakes', 'ranges', 'biomes', 'borders', 'coast'].map(k => [k === 'coast' ? 'Island (coastline)' : PM.KINDS[k].one, () => E.add(k)]));
     $('btn-measure').onclick = () => E.measure();
     $('btn-undo').onclick = () => S.undo();
     $('btn-redo').onclick = () => S.redo();

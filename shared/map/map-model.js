@@ -12,7 +12,7 @@
 
   /* ---------- the format ---------- */
   // The lists in file order. shape: area (closed outline), line (open unless `closed`), point (x, y), or
-  // link (joins two settlements).
+  // link (joins two settlements). A path is a free line: a track or trail that may leave a road anywhere.
   const KINDS = {
     coast:       { one: 'Coastline',      many: 'Coastlines',      shape: 'area',  prefix: 'isle' },
     biomes:      { one: 'Terrain area',   many: 'Terrain areas',   shape: 'area',  prefix: 'area' },
@@ -22,6 +22,7 @@
     borders:     { one: 'Border',         many: 'Borders',         shape: 'line',  prefix: 'border' },
     settlements: { one: 'Settlement',     many: 'Settlements',     shape: 'point', prefix: 'place' },
     roads:       { one: 'Road',           many: 'Roads',           shape: 'link',  prefix: 'road' },
+    paths:       { one: 'Path',           many: 'Paths',           shape: 'line',  prefix: 'path' },
     labels:      { one: 'Label',          many: 'Labels',          shape: 'point', prefix: 'label' }
   };
   const LISTS = Object.keys(KINDS);
@@ -31,7 +32,7 @@
     biomes: ['plains-dry', 'sand', 'mesa', 'obsidian', 'scar', 'rock', 'ice', 'darkforest', 'desert', 'ash', 'forest', 'tundra', 'swamp', 'grass',
       'hills', 'scrub', 'savanna', 'farmland', 'marsh', 'jungle', 'badlands', 'snow'],
     ranges: ['mountain', 'snow', 'volcano', 'butte'],
-    settlements: ['capital', 'city', 'town', 'port', 'fort', 'ruin'],
+    settlements: ['capital', 'city', 'town', 'port', 'village', 'fort', 'ruin'],
     labels: ['realm', 'feature', 'sea']
   };
   const LIMITS = { items: 5000, points: 20000, id: 60, name: 120, text: 200, notes: 5000, coord: 100000 };
@@ -160,6 +161,19 @@
       const pair = [r.from, r.to].sort().join(' > ');
       if (pairs.has(pair)) add('warn', 'roads', r.id, `Road "${r.id}" repeats another road between the same two settlements.`);
       pairs.add(pair);
+    }
+    // A path may end anywhere (a pass, a cove, deep in a wood), but it has to leave from somewhere: one end on a
+    // road, a settlement, or another path.
+    if (map.paths.length) {
+      const lines = map.roads.map(r => roadLine(map, r)).filter(l => l.length > 1);
+      const joined = (p, [x, y]) => map.settlements.some(s => Math.hypot(s.x - x, s.y - y) <= NEAR) || lines.some(l => lineDistance(x, y, l, false).d <= NEAR) ||
+        map.paths.some(o => o !== p && o.pts.length > 1 && lineDistance(x, y, sampleCurve(o.pts, false, 4), false).d <= NEAR);
+      for (const p of map.paths) {
+        if (p.pts.length < 2 || p.closed) continue;
+        if (!joined(p, p.pts[0]) && !joined(p, p.pts[p.pts.length - 1])) add('warn', 'paths', p.id, `Path "${title('paths', p)}" joins nothing: one end should start on a road, a settlement, or another path.`);
+        const wet = sampleCurve(p.pts, false, 4).find(([x, y]) => !onLand(map, x, y) && shoreDistance(map, x, y) > NEAR);
+        if (wet) add('warn', 'paths', p.id, `Path "${title('paths', p)}" runs into the sea near ${Math.round(wet[0])}, ${Math.round(wet[1])}.`);
+      }
     }
     for (const s of map.settlements) {
       if (!onLand(map, s.x, s.y) && shoreDistance(map, s.x, s.y) > NEAR) add('error', 'settlements', s.id, `Settlement "${title('settlements', s)}" is in the sea.`);
@@ -300,6 +314,7 @@
     };
     each('settlements', s => Math.hypot(s.x - x, s.y - y) <= Math.max(tol, opts.pin || 0));
     each('roads', r => nearLine(roadLine(map, r), false, tol));
+    each('paths', p => nearLine(sampleCurve(p.pts, !!p.closed, 6), !!p.closed, tol));
     each('borders', b => nearLine(sampleCurve(b.pts, !!b.closed, 6), !!b.closed, tol));
     each('rivers', r => nearLine(sampleCurve(r.pts, false, 6), false, tol + Math.max(r.width[0], r.width[1]) / 2));
     each('labels', l => {

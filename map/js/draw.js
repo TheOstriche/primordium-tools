@@ -332,6 +332,32 @@
     return 'M' + poly(L.concat(R.reverse())) + 'Z';
   }
 
+  // A small bridge wherever a road crosses a river: a pale deck between two dark rails, as long as the river is wide.
+  function bridges(map) {
+    let s = '';
+    const rivers = map.rivers.map(rv => { const pts = PM.sampleCurve(rv.pts, false, 4); return { rv, pts, box: PM.bbox(pts) }; });
+    for (const rd of map.roads) {
+      const line = PM.roadLine(map, rd); if (line.length < 2) continue;
+      const box = PM.bbox(line), deck = rd.major ? 2.1 : 1.5;
+      let out = '';
+      for (const { rv, pts, box: rb } of rivers) {
+        if (rb[0] > box[2] || rb[2] < box[0] || rb[1] > box[3] || rb[3] < box[1]) continue;
+        for (let i = 0; i < line.length - 1; i++) for (let j = 0; j < pts.length - 1; j++) {
+          const a = line[i], b = line[i + 1], c = pts[j], d = pts[j + 1], den = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+          if (!den) continue;
+          const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / den, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / den;
+          if (t < 0 || t >= 1 || u < 0 || u >= 1) continue;
+          const x = a[0] + t * (b[0] - a[0]), y = a[1] + t * (b[1] - a[1]), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dx = (b[0] - a[0]) / l, dy = (b[1] - a[1]) / l;
+          const half = (rv.width[0] + (rv.width[1] - rv.width[0]) * Math.pow((j + u) / (pts.length - 1), 0.8)) / 2 + 1.5, o = deck / 2;
+          const seg = k => `M${f1(x - dx * half - dy * k)},${f1(y - dy * half + dx * k)}L${f1(x + dx * half - dy * k)},${f1(y + dy * half + dx * k)}`;
+          out += `<path d="${seg(0)}" stroke="${PAL.roadCase}" stroke-width="${deck}"/><path d="${seg(o)}${seg(-o)}" stroke="${PAL.ink}" stroke-width=".4"/>`;
+        }
+      }
+      if (out) s += `<g class="bridge${rd.major ? '' : ' minor-road'}" fill="none">${out}</g>`;
+    }
+    return s;
+  }
+
   /* ---------- static parts ---------- */
   // lod0 (whole map) to lod3 (close up), set by view.js.
   const STYLE = `
@@ -339,7 +365,7 @@
     .lod0 .pin.minor .ico,.lod0 .pin.minor .nm,.lod0 .minor-road,.lod0 .small-label{display:none}
     .lod0 .pin.minor .dot{display:inline}
     .lod1 .pin.minor .nm{display:none}
-    .lod0 .copse{display:none}
+    .lod0 .copse,.lod0 .trail,.lod0 .bridge,.lod0 .pin.village,.lod1 .pin.village{display:none}
     .realm{transition:opacity .25s}
     .lod3 .realm{opacity:.25}
     text{user-select:none;-webkit-user-select:none}`;
@@ -349,6 +375,7 @@
     <g id="sCapital"><circle r="13" cy="-4" fill="${PAL.paper}" opacity=".35"/><path d="M-11 4v-8h3v-5h-1.2l2.7-3.6 2.7 3.6h-1.2v3h2.5v-7.5h-1.2l2.7-3.8 2.7 3.8h-1.2v7.5h2.5v-3h-1.2l2.7-3.6 2.7 3.6h-1.2v5h3v8z" ${body}/><path d="M0-17.6v-4.6l4.6 1.6-4.6 1.6" fill="#8f2c22" stroke="#8f2c22" stroke-width=".6" stroke-linejoin="round"/><path d="M-1.8 4v-3.6a1.8 1.8 0 0 1 3.6 0v3.6z" fill="${PAL.paper}"/></g>
     <g id="sCity"><path d="M-8 3.5v-6.5h2.4v-2.2h-1l2.2-2.9 2.2 2.9h-1v2.2h2.4v-5.4h-1l2.2-2.9 2.2 2.9h-1v5.4h2.4v6.5z" ${body}/><path d="M-1.3 3.5v-2.6a1.3 1.3 0 0 1 2.6 0v2.6z" fill="${PAL.paper}"/></g>
     <g id="sTown"><path d="M-6 3.2v-3.6l3-2.7 2.4 2.1v-2.1l3.4-3 3.4 3v6.3z" ${body}/></g>
+    <g id="sVillage"><path d="M-4.6 2.4v-2.5l2.3-2 2.3 2v2.5zM0.6 2.4v-3.3l2.2-1.9 2.2 1.9v3.3z" ${body}/></g>
     <g id="sPort"><circle r="6.4" cy="-1" fill="${PAL.paper}" stroke="${PAL.ink}" stroke-width="1"/><g stroke="${PAL.ink}" stroke-width="1.35" fill="none" stroke-linecap="round"><circle cy="-4.3" r="1.25"/><path d="M0-3v6.4M-2.4-1.4h4.8M-3.9 0.6q.4 2.9 3.9 2.9t3.9-2.9"/></g></g>
     <g id="sFort"><path d="M-4 3.2v-8.4h1.7v1.5h1.4v-1.5h1.8v1.5h1.4v-1.5h1.7v8.4z" ${body}/></g>
     <g id="sRuin"><path d="M-4.6 3.2v-5.4l1.2-.9 1.2 1.6v4.7zM.8 3.2v-7.6l1.6-.8.9 1.9.9-.6v7.1z" ${body}/></g>
@@ -422,9 +449,11 @@
         map.biomes.filter(b => b.type === 'hills').map(b => cached('h' + JSON.stringify(b) + coast, () => hills(map, b))).join('') +
         map.biomes.filter(woods).map(b => cached('t' + JSON.stringify(b) + coast, () => trees(map, b))).join('');
     } },
-    { id: 'roads', needs: ['roads', 'settlements'], toggles: ['roads'], draw(map, ctx) {
+    { id: 'roads', needs: ['roads', 'paths', 'settlements', 'rivers'], toggles: ['roads'], draw(map, ctx) {
       if (!ctx.vis.roads) return '';
       let s = `<g fill="none" stroke-linecap="round" stroke-linejoin="round">`;
+      // Side paths: fine dotted tracks that appear once you zoom in a little.
+      for (const p of map.paths) s += `<path class="trail" d="${smoothPath(p.pts, !!p.closed)}" stroke="${PAL.road}" opacity=".8" ${dashed(ctx, 0.8, 0.6, 2.4)}/>`;
       for (const rd of map.roads) {
         const pts = PM.roadLine(map, rd);
         if (pts.length < 2) continue;
@@ -432,7 +461,7 @@
         s += `<g${cls}><path d="${d}" stroke="${PAL.roadCase}" opacity=".4" ${sw(ctx, rd.major ? 2.8 : 1.8)}/>` +
           `<path d="${d}" stroke="${PAL.road}" ${rd.major ? dashed(ctx, 1.5, 5, 3) : dashed(ctx, 1, 2, 3)}/></g>`;
       }
-      return s + '</g>';
+      return s + '</g>' + bridges(map);
     } },
     { id: 'ranges', needs: ['ranges'], toggles: ['ranges'], draw: (map, ctx) => (ctx.vis.ranges ? map.ranges.map(g => cached('r' + JSON.stringify(g), () => peaks(g))).join('') : '') },
     { id: 'borders', needs: ['borders'], toggles: ['borders'], draw(map, ctx) {
@@ -456,11 +485,11 @@
     } },
     { id: 'places', needs: ['settlements'], toggles: ['settlements', 'labels'], draw(map, ctx) {
       if (!ctx.vis.settlements) return '';
-      const icon = { capital: 'sCapital', city: 'sCity', town: 'sTown', port: 'sPort', fort: 'sFort', ruin: 'sRuin' };
+      const icon = { capital: 'sCapital', city: 'sCity', town: 'sTown', port: 'sPort', village: 'sVillage', fort: 'sFort', ruin: 'sRuin' };
       let s = '';
       for (const st of map.settlements) {
-        const big = st.type === 'capital' || st.type === 'city', fs = st.type === 'capital' ? 13 : st.type === 'city' ? 11.5 : 10;
-        s += `<g class="pin${big ? '' : ' minor'}" ${at(ctx, st.x, st.y)}><circle class="dot" r="2.3" fill="${PAL.ink}" stroke="${PAL.paper}" stroke-width="1"/><use class="ico" href="#${icon[st.type] || 'sTown'}"/>`;
+        const big = st.type === 'capital' || st.type === 'city', fs = st.type === 'capital' ? 13 : st.type === 'city' ? 11.5 : st.type === 'village' ? 8.5 : 10;
+        s += `<g class="pin${big ? '' : ' minor'}${st.type === 'village' ? ' village' : ''}" ${at(ctx, st.x, st.y)}><circle class="dot" r="2.3" fill="${PAL.ink}" stroke="${PAL.paper}" stroke-width="1"/><use class="ico" href="#${icon[st.type] || 'sTown'}"/>`;
         if (st.name && ctx.vis.labels) s += `<text class="nm" y="${fs + 5}" text-anchor="middle" font-family="${FONT.text}" font-size="${fs}" ${st.type === 'capital' ? 'font-weight="700" ' : ''}fill="${PAL.ink}" stroke="${PAL.paper}" stroke-width="3" paint-order="stroke" stroke-linejoin="round">${esc(st.name)}</text>`;
         s += '</g>';
       }

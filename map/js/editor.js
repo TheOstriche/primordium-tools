@@ -39,7 +39,8 @@
     if (kind === 'rivers' || kind === 'lakes') return vis.rivers;
     if (kind === 'borders') return vis.borders;
     if (kind === 'roads') return vis.roads && (f.major || lod > 0);
-    if (kind === 'settlements') return vis.settlements;
+    if (kind === 'paths') return vis.roads && lod > 0;
+    if (kind === 'settlements') return vis.settlements && (f.type !== 'village' || lod > 1);
     if (kind === 'labels') return vis.labels && (f.size >= 16 || lod > 0);
     return true;
   }
@@ -115,7 +116,7 @@
   /* ---------- drawing new features ---------- */
   const HINT = {
     settlements: 'Click where the settlement goes.', labels: 'Click where the label goes.',
-    roads: 'Click the settlement the road starts at, then the one it ends at.',
+    roads: 'Click the settlement the road starts at, then the one it ends at.', paths: 'Click along the path. Start it on a road or a settlement.',
     rivers: 'Click along the river from its source to its mouth.', ranges: 'Click along the ridge line.', borders: 'Click along the border.',
     lakes: 'Click around the shore of the lake.', biomes: 'Click around the edge of the terrain area.', coast: 'Click around the coast of the island.'
   };

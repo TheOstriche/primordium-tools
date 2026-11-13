@@ -158,7 +158,7 @@
     }
     // Tilled fields round every settlement that stands on farmable ground: larger round a capital than a town.
     if (opts.areas !== false) {
-      const reach = { capital: 30, city: 24, town: 14, port: 10 }, farmable = { 'plains-dry': 1, grass: 1, hills: 1, scrub: 1, savanna: 1, farmland: 1 };
+      const reach = { capital: 30, city: 24, town: 14, port: 10, village: 6 }, farmable = { 'plains-dry': 1, grass: 1, hills: 1, scrub: 1, savanna: 1, farmland: 1 };
       for (const st of map.settlements) {
         const R = reach[st.type], under = PM.biomeAt(map, st.x, st.y);
         if (!R || (under && !farmable[under.type])) continue;
