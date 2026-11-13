@@ -10,7 +10,11 @@
 //      as seldom as it can and squarely (a small stream is forded far more readily).
 //   2. Merging. Roads are laid major first. A later road is cheaper where a road already runs, so roads heading
 //      the same way join into one and travel together. Where they share ground they share the very same line
-//      (the app draws it once). A road never runs alongside another just a little apart: it joins or keeps away.
+//      (the app draws it once). A road never runs alongside another: within about 15 units it either joins the
+//      other road or keeps well away, right up to the edge of the settlement it is making for.
+//      A minor road has to earn its place: it is kept only where it gives a real shortcut over ground of its
+//      own. One that would do nothing but follow other roads the whole way is taken off the map.
+//      (never the last road a settlement has).
 //   3. Crossroads and forks. Where roads meet, part or cross, they do it at one point, and every road through
 //      that point passes through the same spot.
 //   4. Paths are offshoots. A path starts at the place it leads to and takes the easiest way to the nearest road
@@ -125,10 +129,19 @@ function search(s, t, cost, factor, floor, stop) {
 }
 // Rounds off the grid's corners (the two ends stay put), then keeps only the points that carry the shape, with
 // none more than 45 units apart so the smooth curve through them cannot swing wide.
-function shape(pts, tol) {
+function shape(pts, tol, pinEnds) {
   for (let pass = 0; pass < 4; pass++) pts = pts.map((p, i) => (i === 0 || i === pts.length - 1 ? p : [(pts[i - 1][0] + 2 * p[0] + pts[i + 1][0]) / 4, (pts[i - 1][1] + 2 * p[1] + pts[i + 1][1]) / 4]));
   const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
   const go = (a, b) => { let worst = 0, at = -1; for (let i = a + 1; i < b; i++) { const d = PM.segDistance(pts[i][0], pts[i][1], pts[a], pts[b]); if (d > worst) { worst = d; at = i; } } if (worst > tol) { keep[at] = 1; go(a, at); go(at, b); } };
+  // A road stretch also keeps a point 4 units in from each end. The smooth curve through a road's points bends
+  // with its neighbours, so without these two the last long reach before a fork would swing a little
+  // differently for each road that uses the stretch, and they would draw as two lines side by side.
+  if (pinEnds && pts.length > 5) {
+    let run = 0, i = 1; for (; i < pts.length - 2 && run < 4; i++) run += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    keep[i - 1] = 1;
+    for (run = 0, i = pts.length - 2; i > 1 && run < 4; i--) run += Math.hypot(pts[i][0] - pts[i + 1][0], pts[i][1] - pts[i + 1][1]);
+    keep[i + 1] = 1;
+  }
   go(0, pts.length - 1);
   const out = []; let last = 0;
   pts.forEach((p, i) => { if (keep[i] || Math.hypot(p[0] - pts[last][0], p[1] - pts[last][1]) > 45) { out.push([r1(p[0]), r1(p[1])]); last = i; } });
@@ -138,19 +151,39 @@ function shape(pts, tol) {
 /* ---------- roads (rules 1 to 3) ---------- */
 const place = id => PM.find(m, 'settlements', id);
 const straight = rd => Math.hypot(place(rd.from).x - place(rd.to).x, place(rd.from).y - place(rd.to).y);
+const REUSE = +process.env.REUSE || 0.7;   // how cheap it is to follow a road already laid (1: no cheaper)
 const onRoad = new Uint8Array(N);          // 2: a road runs through this cell. 1: right beside one.
 const laid = [];                           // [road, its cells]
 const spot = new Map();                    // the cell a settlement's roads start from -> the settlement's own position
 let unrouted = 0;
 for (const rd of m.roads.filter(r => place(r.from) && place(r.to)).sort((a, b) => (b.major - a.major) || straight(a) - straight(b))) {
   const a = place(rd.from), b = place(rd.to), s = open(a.x, a.y), t = open(b.x, b.y);
-  const ownEnd = j => Math.hypot(cx(j) - a.x, cy(j) - a.y) < 13 || Math.hypot(cx(j) - b.x, cy(j) - b.y) < 13;
-  const cells = s >= 0 && t >= 0 && part[s] === part[t] ? search(s, t, roadCost, j => (onRoad[j] === 2 ? 0.45 : onRoad[j] === 1 && !ownEnd(j) ? 1.7 : 1), 0.45) : null;
+  const ownEnd = j => Math.hypot(cx(j) - a.x, cy(j) - a.y) < 6 || Math.hypot(cx(j) - b.x, cy(j) - b.y) < 6;
+  const cells = s >= 0 && t >= 0 && part[s] === part[t] ? search(s, t, roadCost, j => (onRoad[j] === 2 ? REUSE : onRoad[j] === 1 && !ownEnd(j) ? 2.2 : 1), REUSE) : null;
   if (!cells) { console.log(`Road "${rd.id}" (${rd.from} to ${rd.to}) has no way by land; it was left as it is.`); unrouted++; continue; }
   spot.set(s, [a.x, a.y]); spot.set(t, [b.x, b.y]);
   laid.push([rd, cells]);
   for (const i of cells) onRoad[i] = 2;
-  for (const i of cells) { const x = i % GW, y = (i / GW) | 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < GW && ny < GH && !onRoad[ny * GW + nx]) onRoad[ny * GW + nx] = 1; } }
+  for (const i of cells) { const x = i % GW, y = (i / GW) | 0; for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < GW && ny < GH && !onRoad[ny * GW + nx]) onRoad[ny * GW + nx] = 1; } }
+}
+// A minor road with almost no ground of its own (under 12 units, or under a sixth of its length) only repeats
+// a journey other roads already make, so it goes. Checked from the least useful up, since removing one road can
+// leave another as the only road on a stretch.
+let removed = 0;
+for (;;) {
+  const count = new Map();
+  for (const [, cells] of laid) for (const i of new Set(cells)) count.set(i, (count.get(i) || 0) + 1);
+  let worst = null;
+  for (const entry of laid) {
+    const [rd, cells] = entry; if (rd.major) continue;
+    if ([rd.from, rd.to].some(id => laid.filter(e => e[0].from === id || e[0].to === id).length < 2)) continue;   // never a settlement's last road
+    const own = cells.filter(i => count.get(i) === 1).length * C, share = own / (cells.length * C);
+    if ((own < 12 || share < 0.17) && (!worst || share < worst.share)) worst = { entry, share, own };
+  }
+  if (!worst) break;
+  const rd = worst.entry[0];
+  console.log(`Minor road "${rd.id}" (${rd.from} to ${rd.to}) was taken off: all but ${Math.round(worst.own)} units of it only followed other roads.`);
+  laid.splice(laid.indexOf(worst.entry), 1); m.roads.splice(m.roads.indexOf(rd), 1); removed++;
 }
 // The network: which cells each cell is joined to by some road. A cell with exactly two neighbours is the middle
 // of a stretch; any other, and every settlement, is a meeting point. Each stretch between two meeting points is
@@ -164,7 +197,7 @@ const pointOf = i => spot.get(i) || [cx(i), cy(i)];
 function stretch(cells) {
   const back = cells[0] > cells[cells.length - 1] || (cells[0] === cells[cells.length - 1] && cells[1] > cells[cells.length - 2]);
   const canon = back ? cells.slice().reverse() : cells, key = canon.join(',');
-  if (!stretches.has(key)) stretches.set(key, shape(canon.map(pointOf), 1.5));
+  if (!stretches.has(key)) stretches.set(key, shape(canon.map(pointOf), 1.5, true));
   const pts = stretches.get(key);
   return back ? pts.slice().reverse() : pts;
 }
@@ -219,5 +252,5 @@ fs.writeFileSync(path.join(dir, PM.DATA_FILE), PM.dataFile(m));
 const problems = PM.check(m);
 problems.forEach(p => console.log((p.level === 'error' ? 'Problem: ' : 'Note: ') + p.text));
 console.log(`Laid ${laid.length} roads (${junctions} forks and crossroads outside settlements, ${stretches.size} stretches of road) and ${m.paths.length} paths` +
-  `${dropped ? `; ${dropped} paths left out` : ''}${unrouted ? `; ${unrouted} roads could not be laid` : ''}.`);
+  `${removed ? `; ${removed} minor roads taken off` : ''}${dropped ? `; ${dropped} paths left out` : ''}${unrouted ? `; ${unrouted} roads could not be laid` : ''}.`);
 process.exit(problems.some(p => p.level === 'error') ? 1 : 0);
